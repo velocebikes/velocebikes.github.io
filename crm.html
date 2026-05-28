@@ -169,6 +169,27 @@ textarea.f-input{resize:vertical;min-height:80px;}
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:9999;background:#080807;align-items:center;justify-content:center;">
+  <div style="background:#111;border:0.5px solid #333;padding:3rem;width:100%;max-width:360px;">
+    <div style="font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:#c9a84c;margin-bottom:0.4rem;">Veloce Bikes</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:#f0ede8;margin-bottom:2rem;">Acceso <em style="color:#c9a84c;">CRM</em></div>
+    <div style="margin-bottom:1rem;">
+      <label style="display:block;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:#888;margin-bottom:0.4rem;">Usuario</label>
+      <input id="ls-user" type="text" placeholder="Tu usuario" style="width:100%;background:#1a1a1a;border:0.5px solid #333;color:#f0ede8;padding:0.8rem 1rem;font-size:0.88rem;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div style="margin-bottom:1.5rem;">
+      <label style="display:block;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:#888;margin-bottom:0.4rem;">Contraseña</label>
+      <input id="ls-pass" type="password" placeholder="••••••••" style="width:100%;background:#1a1a1a;border:0.5px solid #333;color:#f0ede8;padding:0.8rem 1rem;font-size:0.88rem;outline:none;box-sizing:border-box;"/>
+    </div>
+    <div id="ls-error" style="display:none;font-size:0.75rem;color:#e07070;margin-bottom:1rem;">Usuario o contraseña incorrectos.</div>
+    <button onclick="doLogin()" style="width:100%;background:#c9a84c;color:#080807;border:none;padding:0.9rem;font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;">Entrar</button>
+  </div>
+</div>
+
+<!-- CRM APP -->
+<div id="crm-app" style="display:none;">
+
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-logo">Veloce<em>.</em>Bikes <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin-left:0.5rem;">CRM</span></div>
@@ -509,13 +530,51 @@ const CLOUD = {name:'dsleoqcqf', preset:'velocebikes'};
 
 // ══ USUARIOS ══
 const USERS={admin:{pass:'Veloce11JCG',nombre:'Julio'},empleado1:{pass:'Veloce11HCP',nombre:'Hugo'},empleado2:{pass:'VeloceBikes#E2',nombre:'Empleado 2'}};
-const params=new URLSearchParams(window.location.search);
-const uParam=params.get('u');
-const currentUser=USERS[uParam]?{user:uParam,...USERS[uParam]}:{user:'admin',nombre:'Administrador'};
-document.getElementById('topbar-user').textContent=currentUser.nombre;
-document.getElementById('dash-name').textContent=currentUser.nombre;
 
-function doLogout(){window.location.href='index.html';}
+// ══ LOGIN OBLIGATORIO ══
+let currentUser = null;
+
+function showLoginScreen(){
+  document.getElementById('crm-app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+function doLogin(){
+  const u = document.getElementById('ls-user').value.trim();
+  const p = document.getElementById('ls-pass').value;
+  if(USERS[u] && USERS[u].pass === p){
+    currentUser = {user:u, ...USERS[u]};
+    sessionStorage.setItem('crm-user', u);
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('crm-app').style.display='block';
+    document.getElementById('topbar-user').textContent=currentUser.nombre;
+    document.getElementById('dash-name').textContent=currentUser.nombre;
+    document.getElementById('ls-error').style.display='none';
+  } else {
+    document.getElementById('ls-error').style.display='block';
+  }
+}
+
+function doLogout(){
+  sessionStorage.removeItem('crm-user');
+  window.location.href='index.html';
+}
+
+// Comprobar si ya hay sesión activa
+const savedUser = sessionStorage.getItem('crm-user');
+if(savedUser && USERS[savedUser]){
+  currentUser = {user:savedUser, ...USERS[savedUser]};
+  document.getElementById('crm-app').style.display='block';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('topbar-user').textContent=currentUser.nombre;
+  document.getElementById('dash-name').textContent=currentUser.nombre;
+} else {
+  showLoginScreen();
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin();
+});
 
 // ══ NAV ══
 function goTo(page, el){
@@ -1286,5 +1345,6 @@ function verHistorialCliente(id){
   openModal('modal-historial');
 }
 </script>
+</div><!-- /crm-app -->
 </body>
 </html>
