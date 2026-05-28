@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Veloce Bikes — CRM Interno</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080807;--surface:#0f0e0d;--card:#141310;--card2:#1a1917;
+  --border:rgba(255,255,255,0.07);--border-warm:rgba(200,170,110,0.2);
+  --gold:#C8AA6E;--gold-dim:rgba(200,170,110,0.4);
+  --text:#EAE6DF;--muted:#7A776F;--muted2:#4A4844;
+  --green:#4CAF7D;--red:#C0614A;--blue:#5B8DD9;
+  --font-serif:'Cormorant Garamond',Georgia,serif;
+  --font-sans:'Jost',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-weight:300;line-height:1.6;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:56px;background:rgba(8,8,7,0.95);backdrop-filter:blur(12px);border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;}
+.topbar-logo{font-family:var(--font-serif);font-size:1.1rem;font-weight:300;letter-spacing:0.18em;text-transform:uppercase;}
+.topbar-logo em{color:var(--gold);font-style:normal;}
+.topbar-right{display:flex;align-items:center;gap:1.5rem;}
+.topbar-user{font-size:0.68rem;letter-spacing:0.12em;color:var(--muted);}
+.btn-logout{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);background:none;border:0.5px solid var(--border);padding:0.35rem 0.9rem;cursor:pointer;transition:all .2s;}
+.btn-logout:hover{color:var(--text);border-color:var(--border-warm);}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:56px;left:0;bottom:0;width:220px;background:var(--surface);border-right:0.5px solid var(--border);padding:1.5rem 0;overflow-y:auto;z-index:90;}
+.nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1.5rem;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .2s;border-left:2px solid transparent;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:rgba(200,170,110,0.05);}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;}
+.nav-section{font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted2);padding:1.2rem 1.5rem 0.4rem;}
+
+/* MAIN */
+.main{margin-left:220px;padding-top:56px;min-height:100vh;}
+.page{display:none;padding:2.5rem;}
+.page.active{display:block;}
+.page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border);}
+.page-eyebrow{font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:0.3rem;}
+.page-title{font-family:var(--font-serif);font-size:2rem;font-weight:300;}
+.page-title em{font-style:italic;color:var(--gold);}
+
+/* BUTTONS */
+.btn-primary{display:inline-flex;align-items:center;gap:0.5rem;background:var(--gold);color:#080807;border:none;padding:0.7rem 1.5rem;font-family:var(--font-sans);font-size:0.65rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:opacity .2s;}
+.btn-primary:hover{opacity:0.85;}
+.btn-outline{display:inline-flex;align-items:center;gap:0.5rem;background:transparent;color:var(--text);border:0.5px solid var(--border-warm);padding:0.7rem 1.5rem;font-family:var(--font-sans);font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-sm{padding:0.4rem 0.9rem!important;font-size:0.6rem!important;}
+.btn-danger{background:rgba(192,97,74,0.15);color:var(--red);border:0.5px solid rgba(192,97,74,0.3);padding:0.4rem 0.9rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:var(--font-sans);transition:all .2s;}
+.btn-danger:hover{background:rgba(192,97,74,0.25);}
+.btn-green{background:rgba(76,175,125,0.15);color:var(--green);border:0.5px solid rgba(76,175,125,0.3);padding:0.4rem 0.9rem;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:var(--font-sans);transition:all .2s;}
+.btn-green:hover{background:rgba(76,175,125,0.25);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:2rem;}
+.stat-card{background:var(--card);padding:1.5rem 2rem;}
+.stat-num{font-family:var(--font-serif);font-size:2.2rem;font-weight:300;color:var(--text);margin-bottom:0.2rem;}
+.stat-label{font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);}
+
+/* TABLE */
+.table-wrap{background:var(--card);border:0.5px solid var(--border);}
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:0.5px solid var(--border);gap:1rem;flex-wrap:wrap;}
+.search-input{background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.55rem 1rem;font-family:var(--font-sans);font-size:0.82rem;outline:none;width:260px;transition:border-color .2s;}
+.search-input:focus{border-color:var(--gold-dim);}
+.search-input::placeholder{color:var(--muted2);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);padding:0.75rem 1rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;}
+td{font-size:0.82rem;padding:0.85rem 1rem;border-bottom:0.5px solid rgba(255,255,255,0.04);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* BADGES */
+.badge{display:inline-block;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.25rem 0.6rem;}
+.badge-green{background:rgba(76,175,125,0.12);color:var(--green);border:0.5px solid rgba(76,175,125,0.3);}
+.badge-gold{background:rgba(200,170,110,0.1);color:var(--gold);border:0.5px solid var(--border-warm);}
+.badge-red{background:rgba(192,97,74,0.12);color:var(--red);border:0.5px solid rgba(192,97,74,0.3);}
+.badge-muted{background:rgba(255,255,255,0.05);color:var(--muted);border:0.5px solid var(--border);}
+.badge-blue{background:rgba(91,141,217,0.12);color:var(--blue);border:0.5px solid rgba(91,141,217,0.3);}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border:0.5px solid var(--border-warm);width:100%;max-width:760px;max-height:92vh;overflow-y:auto;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--card);z-index:10;}
+.modal-title{font-family:var(--font-serif);font-size:1.4rem;font-weight:300;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;transition:color .2s;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:2rem;}
+.modal-footer{padding:1rem 2rem;border-top:0.5px solid var(--border);display:flex;justify-content:flex-end;gap:1rem;position:sticky;bottom:0;background:var(--card);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.form-grid .full{grid-column:span 2;}
+.form-group{display:flex;flex-direction:column;gap:0.4rem;}
+.form-group label{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+.f-input{background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.7rem 0.9rem;font-family:var(--font-sans);font-size:0.85rem;outline:none;transition:border-color .2s;width:100%;}
+.f-input:focus{border-color:var(--gold-dim);}
+.f-input::placeholder{color:var(--muted2);}
+select.f-input{appearance:none;cursor:pointer;}
+textarea.f-input{resize:vertical;min-height:80px;}
+
+/* FOTO UPLOAD */
+.foto-section{margin-top:1.5rem;padding-top:1.5rem;border-top:0.5px solid var(--border);}
+.foto-section-title{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;}
+.upload-zone{border:1.5px dashed var(--border-warm);padding:2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover{border-color:var(--gold);background:rgba(200,170,110,0.03);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone-text{font-size:0.78rem;color:var(--muted);}
+.upload-zone-sub{font-size:0.65rem;color:var(--muted2);margin-top:0.3rem;}
+.fotos-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-top:1rem;}
+.foto-thumb{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--surface);}
+.foto-thumb img{width:100%;height:100%;object-fit:cover;}
+.foto-thumb-del{position:absolute;top:4px;right:4px;background:rgba(192,97,74,0.85);color:white;border:none;width:22px;height:22px;font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:2px;}
+.foto-thumb-main{position:absolute;bottom:4px;left:4px;background:rgba(200,170,110,0.85);color:#080807;font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.15rem 0.4rem;}
+.upload-progress{font-size:0.72rem;color:var(--gold);margin-top:0.5rem;text-align:center;min-height:1.2rem;}
+
+/* ESTADO BUTTONS */
+.estado-btns{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.estado-btn{padding:0.4rem 1rem;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;font-family:var(--font-sans);border:0.5px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;}
+.estado-btn.active-visible{background:rgba(76,175,125,0.15);color:var(--green);border-color:rgba(76,175,125,0.4);}
+.estado-btn.active-reservado{background:rgba(200,170,110,0.1);color:var(--gold);border-color:var(--border-warm);}
+.estado-btn.active-vendido{background:rgba(192,97,74,0.12);color:var(--red);border-color:rgba(192,97,74,0.3);}
+
+/* MOTO THUMB EN TABLA */
+.moto-table-img{width:72px;height:48px;object-fit:cover;display:block;}
+.moto-table-img-ph{width:72px;height:48px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--muted2);}
+
+/* CONTRATO */
+#contrato-preview{background:white;color:#111;padding:3rem;font-family:"Times New Roman",serif;font-size:11pt;line-height:1.7;max-width:740px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+#contrato-preview h2{text-align:center;font-size:14pt;font-weight:bold;text-transform:uppercase;margin-bottom:0.5rem;letter-spacing:0.05em;color:#111;border-bottom:2px solid #111;padding-bottom:0.5rem;}
+#contrato-preview .c-subtitle{text-align:center;font-size:10pt;margin-bottom:2rem;color:#333;}
+#contrato-preview h3{font-size:11pt;font-weight:bold;text-transform:uppercase;margin:1.5rem 0 0.5rem;color:#111;border-bottom:1.5px solid #111;padding-bottom:0.2rem;}
+#contrato-preview p{margin-bottom:0.75rem;text-align:justify;color:#111;}
+#contrato-preview strong{color:#111;font-weight:700;}
+#contrato-preview table{width:100%;border-collapse:collapse;margin:1rem 0 1.5rem;font-size:10.5pt;border:2px solid #111;}
+#contrato-preview table td{padding:0.55rem 0.9rem;border:1px solid #333;color:#111;}
+#contrato-preview .firma-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;}
+#contrato-preview .firma-line{border-top:2px solid #111;margin-top:3.5rem;padding-top:0.5rem;font-size:10pt;text-align:center;color:#111;}
+
+/* AGENDA */
+.cita-card{background:var(--card);border:0.5px solid var(--border);padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;}
+.cita-nombre{font-size:0.88rem;margin-bottom:0.2rem;}
+.cita-meta{font-size:0.7rem;color:var(--muted);}
+.cita-actions{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;}
+
+/* EMPTY */
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:1rem;opacity:0.3;}
+.empty-text{font-size:0.82rem;letter-spacing:0.05em;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main{margin-left:0;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .form-grid{grid-template-columns:1fr;}
+  .form-grid .full{grid-column:span 1;}
+  .fotos-grid{grid-template-columns:repeat(3,1fr);}
+}
+@media print{
+  .topbar,.sidebar,.page-header,.table-wrap,.btn-primary,.btn-outline,.modal-bg,.page:not(#page-contratos){display:none!important;}
+  #page-contratos{margin:0;padding:0;}
+  #contrato-preview{display:block!important;}
+  body{background:white;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">Veloce<em>.</em>Bikes <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin-left:0.5rem;">CRM</span></div>
+  <div class="topbar-right">
+    <span class="topbar-user" id="topbar-user"></span>
+    <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="nav-section">Principal</div>
+  <div class="nav-item active" onclick="goTo('dashboard',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+  </div>
+  <div class="nav-section">Gestión</div>
+  <div class="nav-item" onclick="goTo('vehiculos',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-4l2-5h11l2 5v4h-2M9 17h6"/></svg>Vehículos
+  </div>
+  <div class="nav-item" onclick="goTo('clientes',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Clientes
+  </div>
+  <div class="nav-item" onclick="goTo('contratos',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Contratos
+  </div>
+  <div class="nav-section">Agenda</div>
+  <div class="nav-item" onclick="goTo('agenda',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Citas
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div><div class="page-eyebrow">Resumen</div><h1 class="page-title">Bienvenido, <em id="dash-name"></em></h1></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="stat-v">0</div><div class="stat-label">En stock visibles</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-c">0</div><div class="stat-label">Clientes registrados</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-k">0</div><div class="stat-label">Contratos activos</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-a">0</div><div class="stat-label">Citas esta semana</div></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar"><span style="font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Próximas citas</span></div>
+      <div id="dash-citas" style="padding:1rem 1.5rem;"></div>
+    </div>
+  </div>
+
+  <!-- VEHÍCULOS -->
+  <div class="page" id="page-vehiculos">
+    <div class="page-header">
+      <div><div class="page-eyebrow">Inventario</div><h1 class="page-title">Vehí<em>culos</em></h1></div>
+      <button class="btn-primary" onclick="openModalVehiculo()">+ Añadir vehículo</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <input class="search-input" placeholder="Buscar por matrícula, marca o modelo…" oninput="filterTable('tb-vehiculos',this.value)"/>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn-outline btn-sm" onclick="filtrarEstado('')">Todos</button>
+          <button class="btn-outline btn-sm" onclick="filtrarEstado('Visible')">Visibles</button>
+          <button class="btn-outline btn-sm" onclick="filtrarEstado('Reservado')">Reservados</button>
+          <button class="btn-outline btn-sm" onclick="filtrarEstado('Vendido')">Vendidos</button>
+        </div>
+      </div>
+      <table id="tb-vehiculos">
+        <thead><tr><th>Foto</th><th>Matrícula</th><th>Marca / Modelo</th><th>Año</th><th>Km</th><th>Precio</th><th>Fotos</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="tbody-vehiculos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="page" id="page-clientes">
+    <div class="page-header">
+      <div><div class="page-eyebrow">Agenda</div><h1 class="page-title">Clien<em>tes</em></h1></div>
+      <button class="btn-primary" onclick="openModalCliente()">+ Añadir cliente</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar"><input class="search-input" placeholder="Buscar por DNI, nombre o email…" oninput="filterTable('tb-clientes',this.value)"/></div>
+      <table id="tb-clientes">
+        <thead><tr><th>DNI/NIE</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Ciudad</th><th></th></tr></thead>
+        <tbody id="tbody-clientes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONTRATOS -->
+  <div class="page" id="page-contratos">
+    <div class="page-header" id="contratos-header">
+      <div><div class="page-eyebrow">Documentación</div><h1 class="page-title">Contra<em>tos</em></h1></div>
+      <button class="btn-primary" onclick="openModalContrato()">+ Nuevo contrato</button>
+    </div>
+    <div class="table-wrap" id="contratos-list-wrap">
+      <table id="tb-contratos">
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Cliente</th><th>Vehículo</th><th>Precio</th><th></th></tr></thead>
+        <tbody id="tbody-contratos"></tbody>
+      </table>
+    </div>
+    <div id="contrato-preview" style="display:none;"></div>
+    <div id="contrato-print-actions" style="display:none;gap:1rem;margin-top:1.5rem;">
+      <button class="btn-primary" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      <button class="btn-outline" onclick="backToContratos()">← Volver</button>
+    </div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="page" id="page-agenda">
+    <div class="page-header">
+      <div><div class="page-eyebrow">Calendario</div><h1 class="page-title">Ci<em>tas</em></h1></div>
+      <button class="btn-primary" onclick="openModal('modal-cita')">+ Nueva cita</button>
+    </div>
+    <div id="citas-list"></div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL VEHÍCULO ══ -->
+<div class="modal-bg" id="modal-vehiculo">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-v-title">Nuevo <em style="font-style:italic;color:var(--gold)">vehículo</em></div>
+      <button class="modal-close" onclick="closeModal('modal-vehiculo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="v-id"/>
+      <div class="form-grid">
+        <div class="form-group"><label>Bastidor (VIN)</label><input class="f-input" id="v-bastidor" placeholder="WBS…"/></div>
+        <div class="form-group"><label>Matrícula</label><input class="f-input" id="v-matricula" placeholder="0000 XXX"/></div>
+        <div class="form-group"><label>Marca</label>
+          <select class="f-input" id="v-marca">
+            <option value="">Seleccionar marca…</option>
+            <optgroup label="Marcas Premium">
+              <option>Aprilia</option><option>BMW</option><option>Ducati</option>
+              <option>KTM</option><option>MV Agusta</option><option>Triumph</option>
+            </optgroup>
+            <optgroup label="Japonesas">
+              <option>Honda</option><option>Kawasaki</option><option>Suzuki</option><option>Yamaha</option>
+            </optgroup>
+            <optgroup label="Europeas">
+              <option>Benelli</option><option>Beta</option><option>Bimota</option>
+              <option>Bultaco</option><option>Gas Gas</option><option>Husqvarna</option>
+              <option>Moto Guzzi</option><option>Norton</option><option>Royal Enfield</option>
+              <option>Sherco</option><option>SWM</option><option>TM Racing</option>
+              <option>Ural</option><option>Vespa</option>
+            </optgroup>
+            <optgroup label="Americanas">
+              <option>Harley-Davidson</option><option>Indian</option><option>Zero Motorcycles</option>
+            </optgroup>
+            <optgroup label="Chinas / Otras">
+              <option>CFMoto</option><option>Kymco</option><option>Lifan</option>
+              <option>Loncin</option><option>Macbor</option><option>Mondial</option>
+              <option>Piaggio</option><option>Rieju</option><option>Voge</option>
+              <option>Zontes</option>
+            </optgroup>
+            <option value="Otra">Otra (escribir abajo)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Modelo</label><input class="f-input" id="v-modelo" placeholder="R 1250 GS Adventure"/></div>
+        <div class="form-group"><label>Año</label><input class="f-input" id="v-año" type="number" placeholder="2024"/></div>
+        <div class="form-group"><label>CV</label><input class="f-input" id="v-cv" type="number" placeholder="136"/></div>
+        <div class="form-group"><label>Cilindrada (cc)</label><input class="f-input" id="v-cc" type="number" placeholder="1254"/></div>
+        <div class="form-group"><label>Kilometraje</label><input class="f-input" id="v-km" type="number" placeholder="11500"/></div>
+        <div class="form-group"><label>Garantía</label><select class="f-input" id="v-garantia"><option value="Sí">Sí</option><option value="No">No</option></select></div>
+        <div class="form-group"><label>Precio anuncio (€)</label><input class="f-input" id="v-precio" type="number" placeholder="21990"/></div>
+        <div class="form-group full"><label>Extras / Equipamiento</label><textarea class="f-input" id="v-extras" placeholder="Maletas, control de tracción, quickshifter, escape Akrapovic…"></textarea></div>
+        <div class="form-group full">
+          <label>Estado en web</label>
+          <div class="estado-btns" style="margin-top:0.3rem;">
+            <button type="button" class="estado-btn" id="btn-visible" onclick="setEstado('Visible')">✓ Visible</button>
+            <button type="button" class="estado-btn" id="btn-reservado" onclick="setEstado('Reservado')">⏸ Reservado</button>
+            <button type="button" class="estado-btn" id="btn-vendido" onclick="setEstado('Vendido')">✗ Vendido</button>
+          </div>
+          <input type="hidden" id="v-estado" value="Visible"/>
+        </div>
+      </div>
+
+      <!-- FOTOS -->
+      <div class="foto-section">
+        <div class="foto-section-title">Fotos del vehículo</div>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="foto-input" accept="image/*" multiple onchange="subirFotos(this.files)"/>
+          <div class="upload-zone-text">📷 Arrastra fotos aquí o haz clic para seleccionar</div>
+          <div class="upload-zone-sub">Puedes subir varias a la vez · Se comprimen automáticamente</div>
+        </div>
+        <div class="upload-progress" id="upload-progress"></div>
+        <div class="fotos-grid" id="fotos-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-vehiculo')">Cancelar</button>
+      <button class="btn-primary btn-sm" onclick="saveVehiculo()">Guardar vehículo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENTE -->
+<div class="modal-bg" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="modal-c-title">Nuevo <em style="font-style:italic;color:var(--gold)">cliente</em></div><button class="modal-close" onclick="closeModal('modal-cliente')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:0.65rem;color:var(--muted);margin-bottom:1rem;"><span style="color:var(--red)">*</span> Campos obligatorios</p>
+      <input type="hidden" id="c-id"/>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre <span style="color:var(--red)">*</span></label><input class="f-input" id="c-nombre" placeholder="Juan"/></div>
+        <div class="form-group"><label>Apellidos <span style="color:var(--red)">*</span></label><input class="f-input" id="c-apellidos" placeholder="García López"/></div>
+        <div class="form-group"><label>DNI / NIE <span style="color:var(--red)">*</span></label><input class="f-input" id="c-dni" placeholder="12345678A"/></div>
+        <div class="form-group"><label>Teléfono móvil <span style="color:var(--red)">*</span></label><input class="f-input" id="c-tlf" type="tel" placeholder="+34 600 000 000"/></div>
+        <div class="form-group"><label>Email <span style="font-size:0.55rem;color:var(--muted2)">(opcional)</span></label><input class="f-input" id="c-email" type="email" placeholder="juan@email.com"/></div>
+        <div class="form-group"><label>Número de cuenta (IBAN)</label><input class="f-input" id="c-iban" placeholder="ES00 0000 0000 0000 0000 0000"/></div>
+        <div class="form-group full">
+          <label>Dirección <span style="color:var(--red)">*</span></label>
+          <input class="f-input" id="c-direccion" placeholder="Calle, número…" autocomplete="off" oninput="buscarDireccion(this.value)"/>
+          <div id="direccion-dropdown" style="display:none;background:var(--surface);border:0.5px solid var(--border-warm);max-height:200px;overflow-y:auto;z-index:100;position:relative;"></div>
+        </div>
+        <div class="form-group"><label>Código postal</label><input class="f-input" id="c-cp" placeholder="28001" readonly/></div>
+        <div class="form-group"><label>Ciudad</label><input class="f-input" id="c-ciudad" placeholder="Madrid" readonly/></div>
+        <div class="form-group full" style="display:none"><input id="google-places-key" value=""/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn-primary btn-sm" onclick="saveCliente()">Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONTRATO -->
+<div class="modal-bg" id="modal-contrato">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header"><div class="modal-title">Nuevo <em style="font-style:italic;color:var(--gold)">contrato</em></div><button class="modal-close" onclick="closeModal('modal-contrato')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- TIPO -->
+        <div class="form-group full">
+          <label>Tipo de contrato</label>
+          <select class="f-input" id="k-tipo" onchange="tipoContratoChanged()">
+            <option value="deposito">Gestión de venta y depósito</option>
+            <option value="compra">Contrato de compra (Veloce compra)</option>
+            <option value="reserva">Contrato de reserva</option>
+            <option value="venta">Contrato de venta (Veloce vende)</option>
+          </select>
+        </div>
+        <!-- CLIENTE -->
+        <div class="form-group full">
+          <label id="k-cliente-label">Propietario / Cliente</label>
+          <div style="display:flex;gap:0.5rem;">
+            <input class="f-input" id="k-dni" placeholder="Escribe para buscar…" oninput="autoCliente(this.value)" autocomplete="off" style="flex:1"/>
+            <button type="button" onclick="limpiarCliente()" style="background:var(--surface);border:0.5px solid var(--border);color:var(--muted);padding:0 1rem;cursor:pointer;font-size:0.8rem;" title="Cambiar cliente">✕</button>
+          </div>
+          <div id="k-clientes-dropdown" style="display:none;background:var(--surface);border:0.5px solid var(--border-warm);max-height:180px;overflow-y:auto;"></div>
+        </div>
+        <div class="form-group"><label>Nombre</label><input class="f-input" id="k-nombre" readonly/></div>
+        <div class="form-group"><label>Apellidos</label><input class="f-input" id="k-apellidos" readonly/></div>
+        <div class="form-group full"><label>Dirección</label><input class="f-input" id="k-dir" readonly/></div>
+        <!-- VEHÍCULO -->
+        <div class="form-group full" style="border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label>Vehículo</label>
+          <div style="display:flex;gap:0.5rem;">
+            <input class="f-input" id="k-mat" placeholder="Escribe para buscar…" oninput="autoVehiculo(this.value)" autocomplete="off" style="flex:1"/>
+            <button type="button" onclick="limpiarVehiculo()" style="background:var(--surface);border:0.5px solid var(--border);color:var(--muted);padding:0 1rem;cursor:pointer;font-size:0.8rem;" title="Cambiar vehículo">✕</button>
+          </div>
+          <div id="k-vehiculos-dropdown" style="display:none;background:var(--surface);border:0.5px solid var(--border-warm);max-height:180px;overflow-y:auto;"></div>
+        </div>
+        <div class="form-group"><label>Marca / Modelo</label><input class="f-input" id="k-modelo" readonly/></div>
+        <div class="form-group"><label>Matrícula</label><input class="f-input" id="k-matricula" readonly/></div>
+        <div class="form-group"><label>Año</label><input class="f-input" id="k-año" placeholder="—"/></div>
+        <div class="form-group"><label>Km</label><input class="f-input" id="k-km" placeholder="—"/></div>
+        <!-- CAMPOS SEGÚN TIPO -->
+        <div class="form-group" id="k-group-precio" style="border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label id="k-precio-label">Precio (€)</label>
+          <input class="f-input" id="k-precio" type="number" placeholder="15000" oninput="calcularPendiente()"/>
+        </div>
+        <div class="form-group" id="k-group-plazo" style="border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label id="k-plazo-label">Plazo (días)</label>
+          <input class="f-input" id="k-plazo" type="number" placeholder="90"/>
+        </div>
+        <div class="form-group" id="k-group-señal" style="display:none;border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label>Importe de la señal (€)</label>
+          <input class="f-input" id="k-señal" type="number" placeholder="1000" oninput="calcularPendiente()"/>
+        </div>
+        <div class="form-group" id="k-group-pendiente" style="display:none;">
+          <label>Cantidad pendiente al formalizar</label>
+          <input class="f-input" id="k-pendiente" readonly style="color:var(--gold);"/>
+        </div>
+        <div class="form-group full">
+          <label>Fecha del contrato <span style="font-size:0.6rem;color:var(--muted)">(editable)</span></label>
+          <input class="f-input" id="k-fecha" type="date" style="border-color:var(--border-warm);"/>
+        </div>
+        <!-- GARANTÍA (solo venta) -->
+        <div class="form-group full" id="k-group-garantia" style="display:none;">
+          <label>Garantía</label>
+          <select class="f-input" id="k-garantia-tipo">
+            <option value="propia">1 año de garantía Veloce Cars</option>
+            <option value="oficial">Garantía oficial de fábrica vigente</option>
+          </select>
+        </div>
+        <!-- CONDICIONES PARTICULARES -->
+        <div class="form-group full" style="border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label>Condiciones particulares (opcional)</label>
+          <textarea class="f-input" id="k-condiciones" placeholder="Ej: El neumático se entrega revisado; en caso de pinchadura en los 30 días siguientes, Veloce Cars abonará el 50% del coste de reparación." style="min-height:90px;"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-contrato')">Cancelar</button>
+      <button class="btn-primary btn-sm" onclick="saveContrato()">Generar contrato</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CITA -->
+<div class="modal-bg" id="modal-cita">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header"><div class="modal-title">Nueva <em style="font-style:italic;color:var(--gold)">cita</em></div><button class="modal-close" onclick="closeModal('modal-cita')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Buscar cliente por DNI (opcional)</label><input class="f-input" id="a-dni" placeholder="DNI…" oninput="autoCitaCliente(this.value)"/></div>
+        <div class="form-group"><label>Nombre</label><input class="f-input" id="a-nombre" placeholder="Nombre del cliente"/></div>
+        <div class="form-group"><label>Teléfono</label><input class="f-input" id="a-tlf" placeholder="+34 600 000 000"/></div>
+        <div class="form-group"><label>Fecha</label><input class="f-input" id="a-fecha" type="date"/></div>
+        <div class="form-group"><label>Hora</label><input class="f-input" id="a-hora" type="time"/></div>
+        <div class="form-group full"><label>Motivo / Notas</label><textarea class="f-input" id="a-notas" placeholder="Visita para ver BMW GS…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-cita')">Cancelar</button>
+      <button class="btn-primary btn-sm" onclick="saveCita()">Guardar cita</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CONFIG CLOUDINARY ══
+const CLOUD = {name:'dsleoqcqf', preset:'velocebikes'};
+
+// ══ USUARIOS ══
+const USERS={admin:{pass:'veloce2025',nombre:'Administrador'},empleado1:{pass:'bikes2025',nombre:'Empleado 1'},empleado2:{pass:'bikes2025',nombre:'Empleado 2'}};
+const params=new URLSearchParams(window.location.search);
+const uParam=params.get('u');
+const currentUser=USERS[uParam]?{user:uParam,...USERS[uParam]}:{user:'admin',nombre:'Administrador'};
+document.getElementById('topbar-user').textContent=currentUser.nombre;
+document.getElementById('dash-name').textContent=currentUser.nombre;
+
+function doLogout(){window.location.href='index.html';}
+
+// ══ NAV ══
+function goTo(page, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pageEl = document.getElementById('page-'+page);
+  if(pageEl) pageEl.classList.add('active');
+  if(el && el.classList) el.classList.add('active');
+  try{
+    if(page==='dashboard'){updateStats();renderDashCitas();}
+    else if(page==='vehiculos')renderVehiculos();
+    else if(page==='clientes')renderClientes();
+    else if(page==='contratos')renderContratos();
+    else if(page==='agenda')renderAgenda();
+  }catch(e){console.error('goTo error:',e);}
+}
+
+// ══ STORAGE ══
+function load(k){try{return JSON.parse(localStorage.getItem('vcr_'+k))||[];}catch{return[];}}
+function save(k,v){localStorage.setItem('vcr_'+k,JSON.stringify(v));}
+
+// ══ MODALES ══
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ══ CLOUDINARY UPLOAD ══
+let fotosTemp=[];
+
+async function subirFotos(files){
+  const prog=document.getElementById('upload-progress');
+  const total=files.length;
+  let done=0;
+  prog.textContent=`Subiendo 0 de ${total}…`;
+  for(const file of files){
+    try{
+      const fd=new FormData();
+      fd.append('file',file);
+      fd.append('upload_preset',CLOUD.preset);
+      fd.append('folder','velocebikes');
+      const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD.name}/image/upload`,{method:'POST',body:fd});
+      const data=await res.json();
+      if(data.secure_url){
+        fotosTemp.push(data.secure_url);
+        done++;
+        prog.textContent=`Subiendo ${done} de ${total}…`;
+        renderFotosTemp();
+      }
+    }catch(e){console.error(e);}
+  }
+  prog.textContent=done===total?`✓ ${done} foto${done>1?'s':''} subida${done>1?'s':''} correctamente`:`${done} de ${total} subidas`;
+}
+
+function renderFotosTemp(){
+  const grid=document.getElementById('fotos-grid');
+  grid.innerHTML=fotosTemp.map((url,i)=>`
+    <div class="foto-thumb">
+      <img src="${url}" loading="lazy"/>
+      ${i===0?'<div class="foto-thumb-main">Principal</div>':''}
+      <button class="foto-thumb-del" onclick="deleteFotoTemp(${i})">✕</button>
+    </div>`).join('');
+}
+
+function deleteFotoTemp(i){fotosTemp.splice(i,1);renderFotosTemp();}
+
+// ══ ESTADO ══
+let estadoActual='Visible';
+function setEstado(e){
+  estadoActual=e;
+  const ve=document.getElementById('v-estado');if(ve)ve.value=e;
+  const bv=document.getElementById('btn-visible');if(bv)bv.className='estado-btn'+(e==='Visible'?' active-visible':'');
+  const br=document.getElementById('btn-reservado');if(br)br.className='estado-btn'+(e==='Reservado'?' active-reservado':'');
+  const bvd=document.getElementById('btn-vendido');if(bvd)bvd.className='estado-btn'+(e==='Vendido'?' active-vendido':'');
+}
+
+function openModalVehiculo(id=null){
+  fotosTemp=[];
+  document.getElementById('v-id').value='';
+  ['v-bastidor','v-matricula','v-marca','v-modelo','v-año','v-cv','v-cc','v-km','v-extras','v-precio'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('v-garantia').value='Sí';
+  document.getElementById('upload-progress').textContent='';
+  document.getElementById('fotos-grid').innerHTML='';
+  document.getElementById('modal-v-title').innerHTML='Nuevo <em style="font-style:italic;color:var(--gold)">vehículo</em>';
+  setEstado('Visible');
+
+  if(id){
+    const v=load('vehiculos').find(x=>x.id===id);
+    if(v){
+      document.getElementById('modal-v-title').innerHTML='Editar <em style="font-style:italic;color:var(--gold)">vehículo</em>';
+      document.getElementById('v-id').value=v.id;
+      document.getElementById('v-bastidor').value=v.bastidor||'';
+      document.getElementById('v-matricula').value=v.matricula||'';
+      document.getElementById('v-marca').value=v.marca||'';
+      document.getElementById('v-modelo').value=v.modelo||'';
+      document.getElementById('v-año').value=v.año||'';
+      document.getElementById('v-cv').value=v.cv||'';
+      document.getElementById('v-cc').value=v.cc||'';
+      document.getElementById('v-km').value=v.km||'';
+      document.getElementById('v-extras').value=v.extras||'';
+      document.getElementById('v-precio').value=v.precio||'';
+      document.getElementById('v-garantia').value=v.garantia||'Sí';
+      fotosTemp=[...(v.fotos||[])];
+      setEstado(v.estado||'Visible');
+      renderFotosTemp();
+    }
+  }
+  openModal('modal-vehiculo');
+}
+
+// ══ GUARDAR VEHÍCULO ══
+function saveVehiculo(){
+  const idVal=document.getElementById('v-id').value;
+  const vehiculos=load('vehiculos');
+  const v={
+    id:idVal?Number(idVal):Date.now(),
+    bastidor:document.getElementById('v-bastidor').value.trim(),
+    matricula:document.getElementById('v-matricula').value.trim().toUpperCase(),
+    marca:document.getElementById('v-marca').value.trim(),
+    modelo:document.getElementById('v-modelo').value.trim(),
+    año:document.getElementById('v-año').value,
+    cv:document.getElementById('v-cv').value,
+    cc:document.getElementById('v-cc').value,
+    km:document.getElementById('v-km').value,
+    garantia:document.getElementById('v-garantia').value,
+    extras:document.getElementById('v-extras').value.trim(),
+    estado:estadoActual,
+    precio:document.getElementById('v-precio').value,
+    fotos:[...fotosTemp],
+  };
+  if(!v.marca||!v.modelo){alert('Marca y modelo son obligatorios.');return;}
+  if(idVal){
+    const idx=vehiculos.findIndex(x=>x.id===Number(idVal));
+    if(idx>-1)vehiculos[idx]=v; else vehiculos.push(v);
+  } else {vehiculos.push(v);}
+  save('vehiculos',vehiculos);
+  closeModal('modal-vehiculo');
+  renderVehiculos();updateStats();
+}
+
+// ══ RENDER VEHÍCULOS ══
+let filtroEstado='';
+function filtrarEstado(e){filtroEstado=e;renderVehiculos();}
+
+function renderVehiculos(){
+  const vehiculos=load('vehiculos').filter(v=>!filtroEstado||v.estado===filtroEstado);
+  const tbody=document.getElementById('tbody-vehiculos');
+  if(!vehiculos.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">🏍</div><div class="empty-text">No hay vehículos${filtroEstado?' con estado '+filtroEstado:''}</div></div></td></tr>`;return;}
+  tbody.innerHTML=vehiculos.map(v=>`
+    <tr>
+      <td>${v.fotos&&v.fotos.length?`<img class="moto-table-img" src="${v.fotos[0]}" loading="lazy"/>`:`<div class="moto-table-img-ph">📷</div>`}</td>
+      <td>${v.matricula||'—'}</td>
+      <td><strong style="font-weight:400">${v.marca}</strong> ${v.modelo}</td>
+      <td>${v.año||'—'}</td>
+      <td>${v.km?Number(v.km).toLocaleString('es-ES')+' km':'—'}</td>
+      <td>${v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'—'}</td>
+      <td><span class="badge badge-blue">${(v.fotos||[]).length} fotos</span></td>
+      <td>${estadoBadge(v.estado)}</td>
+      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn-outline btn-sm" onclick="openModalVehiculo(${v.id})">Editar</button>
+        <button class="btn-danger" onclick="deleteVehiculo(${v.id})">Eliminar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function deleteVehiculo(id){
+  if(!confirm('¿Eliminar este vehículo?'))return;
+  save('vehiculos',load('vehiculos').filter(v=>v.id!==id));
+  renderVehiculos();updateStats();
+}
+
+function estadoBadge(e){
+  if(e==='Visible')return'<span class="badge badge-green">Visible</span>';
+  if(e==='Reservado')return'<span class="badge badge-gold">Reservado</span>';
+  return'<span class="badge badge-red">Vendido</span>';
+}
+
+// ══ CLIENTES ══
+function openModalCliente(id=null){
+  document.getElementById('c-id').value='';
+  ['c-nombre','c-apellidos','c-dni','c-tlf','c-email','c-iban','c-direccion','c-cp','c-ciudad'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('c-dni').readOnly=false;
+  document.getElementById('modal-c-title').innerHTML='Nuevo <em style="font-style:italic;color:var(--gold)">cliente</em>';
+  if(id){
+    const c=load('clientes').find(x=>x.id===id);
+    if(c){
+      document.getElementById('modal-c-title').innerHTML='Editar <em style="font-style:italic;color:var(--gold)">cliente</em>';
+      document.getElementById('c-id').value=c.id;
+      document.getElementById('c-nombre').value=c.nombre||'';
+      document.getElementById('c-apellidos').value=c.apellidos||'';
+      document.getElementById('c-dni').value=c.dni||'';
+      document.getElementById('c-dni').readOnly=true;
+      document.getElementById('c-tlf').value=c.tlf||'';
+      document.getElementById('c-email').value=c.email||'';
+      document.getElementById('c-iban').value=c.iban||'';
+      document.getElementById('c-direccion').value=c.direccion||'';
+      document.getElementById('c-cp').value=c.cp||'';
+      document.getElementById('c-ciudad').value=c.ciudad||'';
+    }
+  }
+  openModal('modal-cliente');
+}
+
+function saveCliente(){
+  const clientes=load('clientes');
+  const idVal=document.getElementById('c-id').value;
+  const dni=document.getElementById('c-dni').value.trim().toUpperCase();
+  const nombre=document.getElementById('c-nombre').value.trim();
+  const apellidos=document.getElementById('c-apellidos').value.trim();
+  const tlf=document.getElementById('c-tlf').value.trim();
+  const direccion=document.getElementById('c-direccion').value.trim();
+
+  // Validación campos obligatorios
+  const errores=[];
+  if(!nombre) errores.push('Nombre');
+  if(!apellidos) errores.push('Apellidos');
+  if(!dni) errores.push('DNI / NIE');
+  if(!tlf) errores.push('Teléfono');
+  if(!direccion) errores.push('Dirección');
+  if(errores.length){alert('Campos obligatorios sin rellenar:\n· '+errores.join('\n· '));return;}
+
+  if(!idVal&&clientes.find(c=>c.dni===dni)){alert('Ya existe un cliente con ese DNI.');return;}
+  const c={
+    id:idVal?Number(idVal):Date.now(),
+    nombre,apellidos,dni,tlf,
+    email:document.getElementById('c-email').value.trim(),
+    iban:document.getElementById('c-iban').value.trim(),
+    direccion,
+    cp:document.getElementById('c-cp').value.trim(),
+    ciudad:document.getElementById('c-ciudad').value.trim()
+  };
+  if(idVal){
+    const idx=clientes.findIndex(x=>x.id===Number(idVal));
+    if(idx>-1)clientes[idx]=c; else clientes.push(c);
+  } else {clientes.push(c);}
+  save('clientes',clientes);
+  closeModal('modal-cliente');
+  renderClientes();updateStats();
+}
+
+function renderClientes(){
+  const clientes=load('clientes');
+  const tbody=document.getElementById('tbody-clientes');
+  if(!clientes.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No hay clientes registrados</div></div></td></tr>`;return;}
+  tbody.innerHTML=clientes.map(c=>`
+    <tr>
+      <td style="font-size:0.75rem;color:var(--muted)">${c.dni}</td>
+      <td>${c.nombre} ${c.apellidos}</td>
+      <td>${c.tlf||'—'}</td>
+      <td style="font-size:0.78rem">${c.email||'—'}</td>
+      <td style="font-size:0.78rem">${c.ciudad||'—'}</td>
+      <td style="display:flex;gap:0.4rem;">
+        <button class="btn-outline btn-sm" onclick="openModalCliente(${c.id})">Editar</button>
+        <button class="btn-danger" onclick="deleteCliente(${c.id})">Eliminar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function deleteCliente(id){if(!confirm('¿Eliminar?'))return;save('clientes',load('clientes').filter(c=>c.id!==id));renderClientes();updateStats();}
+
+// ══ AUTOCOMPLETADO ══
+function openModalContrato(){
+  ['k-dni','k-nombre','k-apellidos','k-dir','k-mat','k-modelo','k-matricula','k-año','k-km','k-precio','k-plazo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('k-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('k-clientes-dropdown').style.display='none';
+  document.getElementById('k-vehiculos-dropdown').style.display='none';
+  openModal('modal-contrato');
+}
+
+function autoCliente(val){
+  const dd=document.getElementById('k-clientes-dropdown');
+  if(!val.trim()){dd.style.display='none';return;}
+  const q=val.toLowerCase().trim();
+  const matches=load('clientes').filter(c=>c.dni.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q)||c.apellidos.toLowerCase().includes(q)||(`${c.nombre} ${c.apellidos}`).toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.style.display='block';
+  dd.innerHTML=matches.map(c=>`<div onclick="selectCliente(${c.id})" style="padding:0.7rem 1rem;cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background='rgba(200,170,110,0.08)'" onmouseout="this.style.background=''"><div style="font-size:0.85rem;">${c.nombre} ${c.apellidos}</div><div style="font-size:0.65rem;color:var(--muted);">${c.dni} · ${c.ciudad||''}</div></div>`).join('');
+}
+
+function selectCliente(id){
+  const c=load('clientes').find(x=>x.id===id);if(!c)return;
+  document.getElementById('k-dni').value=`${c.nombre} ${c.apellidos} — ${c.dni}`;
+  document.getElementById('k-nombre').value=c.nombre;
+  document.getElementById('k-apellidos').value=c.apellidos;
+  document.getElementById('k-dir').value=`${c.direccion}, ${c.cp} ${c.ciudad}`;
+  document.getElementById('k-dni').dataset.dni=c.dni;
+  document.getElementById('k-clientes-dropdown').style.display='none';
+}
+
+function autoVehiculo(val){
+  const dd=document.getElementById('k-vehiculos-dropdown');
+  if(!val.trim()){dd.style.display='none';return;}
+  const q=val.toLowerCase().trim();
+  const matches=load('vehiculos').filter(v=>v.matricula.toLowerCase().includes(q)||(v.bastidor||'').toLowerCase().includes(q)||v.marca.toLowerCase().includes(q)||v.modelo.toLowerCase().includes(q)||(`${v.marca} ${v.modelo}`).toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.style.display='block';
+  dd.innerHTML=matches.map(v=>`<div onclick="selectVehiculo(${v.id})" style="padding:0.7rem 1rem;cursor:pointer;border-bottom:0.5px solid var(--border);" onmouseover="this.style.background='rgba(200,170,110,0.08)'" onmouseout="this.style.background=''"><div style="font-size:0.85rem;">${v.marca} ${v.modelo}</div><div style="font-size:0.65rem;color:var(--muted);">${v.matricula||'Sin matrícula'} · ${v.año||''} · ${v.km?Number(v.km).toLocaleString('es-ES')+' km':''}</div></div>`).join('');
+}
+
+function selectVehiculo(id){
+  const v=load('vehiculos').find(x=>x.id===id);if(!v)return;
+  document.getElementById('k-mat').value=`${v.marca} ${v.modelo}${v.matricula?' — '+v.matricula:''}`;
+  document.getElementById('k-modelo').value=`${v.marca} ${v.modelo}`;
+  document.getElementById('k-matricula').value=v.matricula||'';
+  document.getElementById('k-año').value=v.año||'';
+  document.getElementById('k-km').value=v.km||'';
+  document.getElementById('k-vehiculos-dropdown').style.display='none';
+  // Si el precio del vehículo está en el CRM y el campo está vacío, sugerirlo
+  const precioField=document.getElementById('k-precio');
+  if(v.precio&&!precioField.value) precioField.value=v.precio;
+  calcularPendiente();
+}
+
+function limpiarCliente(){
+  ['k-dni','k-nombre','k-apellidos','k-dir'].forEach(id=>document.getElementById(id).value='');
+  delete document.getElementById('k-dni').dataset.dni;
+  document.getElementById('k-clientes-dropdown').style.display='none';
+}
+
+function limpiarVehiculo(){
+  ['k-mat','k-modelo','k-matricula','k-año','k-km'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('k-vehiculos-dropdown').style.display='none';
+}
+
+// ══ CONTRATOS ══
+function tipoContratoChanged(){
+  const tipo=document.getElementById('k-tipo').value;
+  const lbl={deposito:'Propietario (depositante)',compra:'Vendedor (propietario)',reserva:'Comprador (reservante)',venta:'Comprador'};
+  document.getElementById('k-cliente-label').textContent=lbl[tipo]||'Cliente';
+  document.getElementById('k-precio-label').textContent=tipo==='deposito'?'Precio a percibir propietario (€)':tipo==='compra'?'Precio de compra (€)':tipo==='reserva'?'Precio total del vehículo (€)':'Precio de venta (€)';
+  document.getElementById('k-plazo-label').textContent=tipo==='deposito'?'Plazo del contrato (días)':'Plazo de reserva (días)';
+  document.getElementById('k-group-señal').style.display=tipo==='reserva'?'block':'none';
+  document.getElementById('k-group-pendiente').style.display=tipo==='reserva'?'block':'none';
+  document.getElementById('k-group-garantia').style.display=tipo==='venta'?'block':'none';
+  document.getElementById('k-group-plazo').style.display=tipo==='compra'||tipo==='venta'?'none':'block';
+  // Plazo por defecto 7 días en reserva
+  if(tipo==='reserva') document.getElementById('k-plazo').value='7';
+  // Precio editable siempre
+  document.getElementById('k-precio').readOnly=false;
+}
+
+function calcularPendiente(){
+  const precio=Number(document.getElementById('k-precio').value)||0;
+  const señal=Number(document.getElementById('k-señal').value)||0;
+  const pendiente=precio-señal;
+  document.getElementById('k-pendiente').value=pendiente>0?pendiente.toLocaleString('es-ES')+' €':'—';
+}
+
+function openModalContrato(){
+  ['k-dni','k-nombre','k-apellidos','k-dir','k-mat','k-modelo','k-matricula','k-año','k-km','k-precio','k-plazo','k-señal','k-pendiente','k-condiciones'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('k-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('k-tipo').value='deposito';
+  document.getElementById('k-clientes-dropdown').style.display='none';
+  document.getElementById('k-vehiculos-dropdown').style.display='none';
+  tipoContratoChanged();
+  openModal('modal-contrato');
+}
+
+function saveContrato(){
+  const contratos=load('contratos');
+  const dniField=document.getElementById('k-dni');
+  const editId=document.getElementById('k-tipo').dataset.editId;
+  const k={
+    id:editId?Number(editId):Date.now(),
+    tipo:document.getElementById('k-tipo').value,
+    fecha:document.getElementById('k-fecha').value||new Date().toISOString().split('T')[0],
+    dni:dniField.dataset.dni||'',
+    nombre:document.getElementById('k-nombre').value,
+    apellidos:document.getElementById('k-apellidos').value,
+    dir:document.getElementById('k-dir').value,
+    modelo:document.getElementById('k-modelo').value,
+    matricula:document.getElementById('k-matricula').value,
+    año:document.getElementById('k-año').value,
+    km:document.getElementById('k-km').value,
+    precio:document.getElementById('k-precio').value,
+    plazo:document.getElementById('k-plazo').value,
+    señal:document.getElementById('k-señal').value,
+    pendiente:document.getElementById('k-pendiente').value,
+    garantiaTipo:document.getElementById('k-garantia-tipo').value,
+    condiciones:document.getElementById('k-condiciones').value.trim(),
+  };
+  if(!k.nombre||!k.modelo){alert('Completa cliente y vehículo.');return;}
+  if(editId){
+    const idx=contratos.findIndex(x=>x.id===Number(editId));
+    if(idx>-1)contratos[idx]=k; else contratos.push(k);
+    delete document.getElementById('k-tipo').dataset.editId;
+  } else {contratos.push(k);}
+  save('contratos',contratos);closeModal('modal-contrato');renderContratos();updateStats();
+}
+
+function renderContratos(){
+  const contratos=load('contratos');
+  const tbody=document.getElementById('tbody-contratos');
+  const tipoLabel={deposito:'Depósito',compra:'Compra',reserva:'Reserva',venta:'Venta'};
+  const tipoBadge={deposito:'badge-gold',compra:'badge-blue',reserva:'badge-muted',venta:'badge-green'};
+  if(!contratos.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">📄</div><div class="empty-text">No hay contratos</div></div></td></tr>`;return;}
+  tbody.innerHTML=contratos.map(k=>`
+    <tr>
+      <td style="font-size:0.75rem;color:var(--muted)">${formatDate(k.fecha)}</td>
+      <td><span class="badge ${tipoBadge[k.tipo]||'badge-muted'}">${tipoLabel[k.tipo]||k.tipo}</span></td>
+      <td>${k.nombre} ${k.apellidos}</td>
+      <td>${k.modelo}${k.matricula?' · '+k.matricula:''}</td>
+      <td><strong style="font-weight:500">${k.precio?Number(k.precio).toLocaleString('es-ES')+' €':'—'}</strong></td>
+      <td style="display:flex;gap:0.5rem;">
+        <button class="btn-outline btn-sm" onclick="editContrato(${k.id})">Editar</button>
+        <button class="btn-primary btn-sm" onclick="verContrato(${k.id})">Ver / Imprimir</button>
+        <button class="btn-danger" onclick="deleteContrato(${k.id})">Eliminar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function editContrato(id){
+  const k=load('contratos').find(x=>x.id===id);if(!k)return;
+  openModalContrato();
+  // Rellenar datos
+  document.getElementById('k-tipo').value=k.tipo||'deposito';
+  tipoContratoChanged();
+  document.getElementById('k-dni').value=k.nombre+' '+k.apellidos+(k.dni?' — '+k.dni:'');
+  document.getElementById('k-dni').dataset.dni=k.dni||'';
+  document.getElementById('k-nombre').value=k.nombre||'';
+  document.getElementById('k-apellidos').value=k.apellidos||'';
+  document.getElementById('k-dir').value=k.dir||'';
+  document.getElementById('k-mat').value=k.modelo+(k.matricula?' — '+k.matricula:'');
+  document.getElementById('k-modelo').value=k.modelo||'';
+  document.getElementById('k-matricula').value=k.matricula||'';
+  document.getElementById('k-año').value=k.año||'';
+  document.getElementById('k-km').value=k.km||'';
+  document.getElementById('k-precio').value=k.precio||'';
+  document.getElementById('k-plazo').value=k.plazo||'';
+  document.getElementById('k-señal').value=k.señal||'';
+  document.getElementById('k-pendiente').value=k.pendiente||'';
+  document.getElementById('k-fecha').value=k.fecha||'';
+  document.getElementById('k-condiciones').value=k.condiciones||'';
+  if(k.garantiaTipo) document.getElementById('k-garantia-tipo').value=k.garantiaTipo;
+  // Guardar id para sobreescribir al guardar
+  document.getElementById('k-tipo').dataset.editId=k.id;
+}
+
+function deleteContrato(id){if(!confirm('¿Eliminar?'))return;save('contratos',load('contratos').filter(k=>k.id!==id));renderContratos();updateStats();}
+
+function verContrato(id){
+  const k=load('contratos').find(k=>k.id===id);if(!k)return;
+  const fd=new Date(k.fecha);
+  const M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dia=fd.getDate(), mes=M[fd.getMonth()], año=fd.getFullYear();
+  let plazoFin='';
+  if(k.plazo){const pf=new Date(fd);pf.setDate(pf.getDate()+Number(k.plazo));plazoFin=`${pf.getDate()} de ${M[pf.getMonth()]} de ${pf.getFullYear()}`;}
+  const km=k.km?Number(k.km).toLocaleString('es-ES')+' km':'—';
+  const precio=k.precio?Number(k.precio).toLocaleString('es-ES')+' €':'—';
+  const señal=k.señal?Number(k.señal).toLocaleString('es-ES')+' €':'—';
+
+  const tablaVehiculo=`<table style="width:100%;border-collapse:collapse;margin:1rem 0 1.5rem;font-size:10.5pt;border:2px solid #111;">
+    <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;width:45%;font-weight:700;color:#111;">Marca y modelo</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;font-weight:600;">${k.modelo}</td></tr>
+    <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Matrícula</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${k.matricula||'—'}</td></tr>
+    <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Kilometraje</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${km}</td></tr>
+    <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Año</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${k.año||'—'}</td></tr>
+    <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Precio</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;font-weight:700;">${precio}</td></tr>
+  </table>`;
+
+  const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;">
+    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:3.5rem;padding-top:0.5rem;font-size:10pt;">${a}</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:3.5rem;padding-top:0.5rem;font-size:10pt;">${b}</div></div>
+  </div>`;
+
+  const condBlock=k.condiciones?`<h3>CONDICIONES PARTICULARES</h3><p>De forma adicional, las partes acuerdan las siguientes condiciones particulares: ${k.condiciones}</p>`:'';
+
+  let html='';
+
+  // ── 1. DEPÓSITO ──
+  if(k.tipo==='deposito'){
+    html=`<h2>CONTRATO DE GESTIÓN DE VENTA Y DEPÓSITO DE MOTOCICLETA</h2>
+    <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
+    <h3>REUNIDOS</h3>
+    <p><strong>PARTE GESTORA / DEPOSITARIA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, y domicilio en Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
+    <p><strong>PARTE PROPIETARIA / DEPOSITANTE</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>LA PARTE PROPIETARIA</strong>.</p>
+    <h3>EXPONEN</h3>
+    <p>I. LA PARTE PROPIETARIA es legítima propietaria de la motocicleta descrita en este contrato y desea encargar su gestión de venta.</p>
+    <p>II. VELOCE CARS se dedica a la gestión, intermediación y exposición de vehículos, y acepta encargarse de la gestión comercial.</p>
+    <p>III. Ambas partes acuerdan formalizar el presente contrato conforme a las siguientes:</p>
+    <h3>CLÁUSULAS</h3>
+    <p><strong>Primera. Objeto.</strong><br>LA PARTE PROPIETARIA entrega a VELOCE CARS el vehículo descrito a continuación para su depósito, exposición y gestión de venta.</p>
+    ${tablaVehiculo}
+    <p><strong>Segunda. Ubicación del depósito.</strong><br>El vehículo permanecerá depositado y expuesto en las instalaciones de VELOCE CARS, situadas en Avenida de Luis García Cereceda nº 5, parking -1, 28223 Pozuelo de Alarcón, Madrid, salvo acuerdo expreso entre ambas partes para su ubicación en otro lugar.</p>
+    <p><strong>Tercera. Gestión de venta.</strong><br>VELOCE CARS queda autorizada para realizar todas las actuaciones necesarias para la promoción y venta del vehículo, incluyendo fotografías, publicación en portales, atención a interesados, visitas y asistencia documental.</p>
+    <p><strong>Cuarta. Custodia y seguro.</strong><br>VELOCE CARS custodiará el vehículo con la debida diligencia. La entrega no supone transmisión de propiedad. LA PARTE PROPIETARIA mantendrá vigente el seguro obligatorio durante todo el período de depósito.</p>
+    <p><strong>Quinta. Documentación.</strong><br>LA PARTE PROPIETARIA declara que el vehículo se entrega libre de cargas, gravámenes, reservas de dominio o limitaciones que impidan su venta, y que toda la información facilitada es veraz.</p>
+    <p><strong>Sexta. Precio y comisión.</strong><br>LA PARTE PROPIETARIA percibirá el importe indicado en la tabla anterior. VELOCE CARS podrá comercializar el vehículo por un precio superior, correspondiéndole la diferencia como honorarios de gestión.</p>
+    <p><strong>Séptima. Aceptación de ofertas.</strong><br>Cualquier oferta por importe inferior al precio pactado requerirá aceptación expresa de LA PARTE PROPIETARIA antes de formalizarse.</p>
+    <p><strong>Octava. Entrega al comprador.</strong><br>El vehículo no será entregado hasta que el precio total haya sido abonado íntegramente.</p>
+    <p><strong>Novena. Duración.</strong><br>El contrato tendrá vigencia desde la firma hasta el día ${plazoFin||'___________'}, prorrogable por mutuo acuerdo.</p>
+    <p><strong>Décima. Retirada.</strong><br>LA PARTE PROPIETARIA podrá retirar el vehículo previa comunicación, siempre que no exista operación en curso o reserva formalizada.</p>
+    <p><strong>Undécima. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${condBlock}
+    <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
+    ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`LA PARTE PROPIETARIA<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
+  }
+
+  // ── 2. COMPRA ──
+  else if(k.tipo==='compra'){
+    html=`<h2>CONTRATO DE COMPRAVENTA DE VEHÍCULO</h2>
+    <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
+    <h3>REUNIDOS</h3>
+    <p><strong>PARTE COMPRADORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
+    <p><strong>PARTE VENDEDORA</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL VENDEDOR</strong>.</p>
+    <h3>CLÁUSULAS</h3>
+    <p><strong>Primera. Objeto.</strong><br>EL VENDEDOR transmite a VELOCE CARS la plena propiedad del vehículo descrito a continuación, libre de cargas y gravámenes.</p>
+    ${tablaVehiculo}
+    <p><strong>Segunda. Precio y pago.</strong><br>El precio acordado es de <strong>${precio}</strong>, que VELOCE CARS abona en su totalidad en el acto de firma del presente contrato.</p>
+    <p><strong>Tercera. Estado del vehículo.</strong><br>EL VENDEDOR declara que el vehículo se encuentra en el estado descrito, con la documentación en regla, al corriente del seguro obligatorio y libre de cualquier carga, embargo o reserva de dominio.</p>
+    <p><strong>Cuarta. Transmisión de propiedad.</strong><br>La propiedad se transmite a VELOCE CARS en el momento del pago. EL VENDEDOR se compromete a facilitar todos los documentos necesarios para la transferencia.</p>
+    <p><strong>Quinta. Documentación.</strong><br>EL VENDEDOR entrega en el acto: permiso de circulación, ficha técnica, documentación acreditativa de la titularidad y, en su caso, justificante del último ITV favorable.</p>
+    <p><strong>Sexta. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${condBlock}
+    <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
+    ${firmas('VELOCE CARS BOUTIQUE S.L. (Comprador)<br>Firma: ______________________<br>Nombre: _____________________',`EL VENDEDOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
+  }
+
+  // ── 3. RESERVA ──
+  else if(k.tipo==='reserva'){
+    html=`<h2>CONTRATO DE RESERVA DE VEHÍCULO</h2>
+    <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
+    <h3>REUNIDOS</h3>
+    <p><strong>PARTE VENDEDORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
+    <p><strong>PARTE COMPRADORA / RESERVANTE</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL COMPRADOR</strong>.</p>
+    <h3>CLÁUSULAS</h3>
+    <p><strong>Primera. Objeto.</strong><br>EL COMPRADOR reserva el vehículo descrito a continuación, comprometiéndose a adquirirlo en las condiciones pactadas.</p>
+    ${tablaVehiculo}
+    <p><strong>Segunda. Señal de reserva.</strong><br>EL COMPRADOR entrega en el acto una señal de <strong>${señal}</strong> en concepto de reserva. Dicho importe se descontará íntegramente del precio final (${precio}) en el momento de la compraventa, quedando un importe pendiente de <strong>${k.pendiente||'—'}</strong>.</p>
+    <p><strong>Tercera. Efectos de la señal.</strong><br>La señal entregada tiene carácter confirmatorio de la reserva y se descontará del precio final en el momento de formalizar la compraventa.</p>
+    <p><strong>Cuarta. Plazo de formalización.</strong><br>La compraventa definitiva deberá formalizarse en un plazo máximo de <strong>7 días naturales</strong>${plazoFin?' (hasta el '+plazoFin+')':''} desde la firma de este documento.</p>
+    <p><strong>Quinta. Retirada del vehículo.</strong><br>Durante el período de reserva, VELOCE CARS retirará el vehículo de la venta y no aceptará otras ofertas sobre el mismo.</p>
+    <p><strong>Sexta. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${condBlock}
+    <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
+    ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`EL COMPRADOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
+  }
+
+  // ── 4. VENTA ──
+  else if(k.tipo==='venta'){
+    const garantiaTexto = k.garantiaTipo==='oficial'
+      ? 'El vehículo dispone de garantía oficial de fábrica vigente, cuyos términos y condiciones son los establecidos por el fabricante.'
+      : 'VELOCE CARS otorga al COMPRADOR una garantía de un (1) año sobre el vehículo, cubriendo los defectos de funcionamiento no derivados del uso ordinario ni de modificaciones realizadas por el COMPRADOR.';
+    html=`<h2>CONTRATO DE COMPRAVENTA DE VEHÍCULO</h2>
+    <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
+    <h3>REUNIDOS</h3>
+    <p><strong>PARTE VENDEDORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
+    <p><strong>PARTE COMPRADORA</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL COMPRADOR</strong>.</p>
+    <h3>CLÁUSULAS</h3>
+    <p><strong>Primera. Objeto.</strong><br>VELOCE CARS vende y transmite a EL COMPRADOR la plena propiedad del vehículo descrito a continuación.</p>
+    ${tablaVehiculo}
+    <p><strong>Segunda. Precio y pago.</strong><br>El precio de venta acordado es de <strong>${precio}</strong>, abonado en su totalidad por EL COMPRADOR en el momento de la firma del presente contrato.</p>
+    <p><strong>Tercera. Estado del vehículo.</strong><br>EL COMPRADOR declara conocer el estado del vehículo, habiéndolo examinado a su satisfacción antes de la firma. VELOCE CARS garantiza que el vehículo se entrega libre de cargas y gravámenes.</p>
+    <p><strong>Cuarta. Transmisión de propiedad.</strong><br>La propiedad se transmite a EL COMPRADOR en el momento del pago íntegro del precio acordado.</p>
+    <p><strong>Quinta. Documentación.</strong><br>VELOCE CARS entrega al COMPRADOR toda la documentación del vehículo necesaria para formalizar la transferencia.</p>
+    <p><strong>Sexta. Garantía.</strong><br>${garantiaTexto}</p>
+    <p><strong>Séptima. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${condBlock}
+    <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
+    ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`EL COMPRADOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
+  }
+
+  document.getElementById('contrato-preview').innerHTML=html;
+  document.getElementById('contrato-preview').style.display='block';
+  document.getElementById('contrato-print-actions').style.display='flex';
+  document.getElementById('contratos-list-wrap').style.display='none';
+  document.getElementById('contratos-header').style.display='none';
+}
+
+function backToContratos(){
+  document.getElementById('contrato-preview').style.display='none';
+  document.getElementById('contrato-print-actions').style.display='none';
+  document.getElementById('contratos-list-wrap').style.display='block';
+  document.getElementById('contratos-header').style.display='flex';
+}
+
+// ══ CITAS ══
+function autoCitaCliente(val){const c=load('clientes').find(c=>c.dni.toLowerCase()===val.toLowerCase().trim());if(c){document.getElementById('a-nombre').value=`${c.nombre} ${c.apellidos}`;document.getElementById('a-tlf').value=c.tlf;}}
+function saveCita(){
+  const citas=load('citas');
+  const c={id:Date.now(),nombre:document.getElementById('a-nombre').value.trim(),tlf:document.getElementById('a-tlf').value.trim(),fecha:document.getElementById('a-fecha').value,hora:document.getElementById('a-hora').value,notas:document.getElementById('a-notas').value.trim()};
+  if(!c.nombre||!c.fecha){alert('Nombre y fecha son obligatorios.');return;}
+  citas.push(c);save('citas',citas);closeModal('modal-cita');
+  ['a-dni','a-nombre','a-tlf','a-fecha','a-hora','a-notas'].forEach(id=>document.getElementById(id).value='');
+  renderAgenda();updateStats();
+}
+
+function renderAgenda(){
+  const citas=load('citas').sort((a,b)=>new Date(a.fecha+'T'+a.hora)-new Date(b.fecha+'T'+b.hora));
+  const container=document.getElementById('citas-list');
+  if(!citas.length){container.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">No hay citas programadas</div></div>`;return;}
+  const today=new Date().toISOString().split('T')[0];
+  const proximas=citas.filter(c=>c.fecha>=today);
+  const pasadas=citas.filter(c=>c.fecha<today);
+  let html='';
+  if(proximas.length){html+=`<div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;">Próximas citas</div>`;html+=proximas.map(c=>citaCard(c)).join('');}
+  if(pasadas.length){html+=`<div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted2);margin:1.5rem 0 1rem;">Historial</div>`;html+=pasadas.map(c=>citaCard(c,true)).join('');}
+  container.innerHTML=html;
+}
+
+function citaCard(c,pasada=false){
+  const waMsg=encodeURIComponent(`Hola ${c.nombre}, le recordamos su cita en Veloce Bikes el ${formatDate(c.fecha)} a las ${c.hora}. Le esperamos en La Finca Grand Café, Pozuelo de Alarcón. ¡Hasta pronto!`);
+  const waUrl=`https://wa.me/${(c.tlf||'').replace(/\D/g,'')}?text=${waMsg}`;
+  return `<div class="cita-card" style="${pasada?'opacity:0.5':''}">
+    <div style="flex:1"><div class="cita-nombre">${c.nombre}</div><div class="cita-meta">${formatDate(c.fecha)} · ${c.hora||'—'}${c.notas?' · '+c.notas:''}</div></div>
+    <div class="cita-actions">
+      ${c.tlf?`<a href="${waUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:#25D366;border:0.5px solid rgba(37,211,102,0.25);padding:0.4rem 0.8rem;text-decoration:none;">📱 WA Recordatorio</a>`:''}
+      <button class="btn-danger" onclick="deleteCita(${c.id})">Eliminar</button>
+    </div>
+  </div>`;
+}
+
+function deleteCita(id){if(!confirm('¿Eliminar?'))return;save('citas',load('citas').filter(c=>c.id!==id));renderAgenda();updateStats();}
+
+// ══ DASHBOARD ══
+function updateStats(){
+  document.getElementById('stat-v').textContent=load('vehiculos').filter(v=>v.estado==='Visible').length;
+  document.getElementById('stat-c').textContent=load('clientes').length;
+  document.getElementById('stat-k').textContent=load('contratos').length;
+  const today=new Date().toISOString().split('T')[0];
+  const we=new Date();we.setDate(we.getDate()+7);
+  document.getElementById('stat-a').textContent=load('citas').filter(c=>c.fecha>=today&&c.fecha<=we.toISOString().split('T')[0]).length;
+}
+
+function renderDashCitas(){
+  const citas=load('citas').filter(c=>c.fecha>=new Date().toISOString().split('T')[0]).slice(0,5);
+  const el=document.getElementById('dash-citas');
+  if(!citas.length){el.innerHTML=`<p style="font-size:0.82rem;color:var(--muted);padding:0.5rem 0;">No hay citas próximas.</p>`;return;}
+  el.innerHTML=citas.map(c=>`<div style="display:flex;justify-content:space-between;padding:0.7rem 0;border-bottom:0.5px solid var(--border);"><span style="font-size:0.85rem;">${c.nombre}</span><span style="font-size:0.75rem;color:var(--muted);">${formatDate(c.fecha)} · ${c.hora||'—'}</span></div>`).join('');
+}
+
+// ══ HELPERS ══
+function formatDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;}
+function filterTable(tid,val){document.querySelectorAll(`#${tid} tbody tr`).forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(val.toLowerCase())?'':' none';});}
+
+function cargarStockInicial(){
+  const motos=[
+    {id:Date.now()+1, marca:'BMW', modelo:'R 1250 GS Adventure Triple Black', matricula:'', bastidor:'', año:'2024', km:'11500', cv:'136', cc:'1254', garantia:'Sí', extras:'Triple Black, maletas laterales, llantas doradas, protectores de motor', estado:'Visible', precio:'21990', fotos:[]},
+    {id:Date.now()+2, marca:'BMW', modelo:'R 1300 RT', matricula:'', bastidor:'', año:'2026', km:'2600', cv:'145', cc:'1300', garantia:'Sí', extras:'3 maletas, asiento comfort', estado:'Visible', precio:'25990', fotos:[]},
+    {id:Date.now()+3, marca:'Ducati', modelo:'Streetfighter V4 Corsa', matricula:'', bastidor:'', año:'', km:'', cv:'208', cc:'1103', garantia:'Sí', extras:'Edición Corsa', estado:'Visible', precio:'17990', fotos:[]},
+    {id:Date.now()+4, marca:'Yamaha', modelo:'YZF-R1 Akrapovic', matricula:'', bastidor:'', año:'', km:'', cv:'200', cc:'998', garantia:'Sí', extras:'Escape Akrapovic', estado:'Visible', precio:'23490', fotos:[]},
+    {id:Date.now()+5, marca:'Ducati', modelo:'Hypermotard 950 SP', matricula:'', bastidor:'', año:'', km:'', cv:'114', cc:'937', garantia:'Sí', extras:'Suspensión Öhlins, frenos Brembo', estado:'Visible', precio:'16250', fotos:[]},
+    {id:Date.now()+6, marca:'BMW', modelo:'R 1250 GS Adventure Rallye', matricula:'', bastidor:'', año:'', km:'', cv:'136', cc:'1254', garantia:'Sí', extras:'Edición Rallye, maletas, protectores', estado:'Reservado', precio:'20990', fotos:[]},
+    {id:Date.now()+7, marca:'Ducati', modelo:'Multistrada 950', matricula:'', bastidor:'', año:'', km:'2500', cv:'113', cc:'937', garantia:'Sí', extras:'Maletas laterales', estado:'Visible', precio:'9250', fotos:[]},
+  ];
+  save('vehiculos', motos);
+}
+
+// ══ NOMINATIM ADDRESS AUTOCOMPLETE (OpenStreetMap, gratis, sin key) ══
+let nominatimTimeout = null;
+
+function buscarDireccion(val){
+  const dd = document.getElementById('direccion-dropdown');
+  if(!val || val.length < 5){ dd.style.display='none'; return; }
+  clearTimeout(nominatimTimeout);
+  nominatimTimeout = setTimeout(async () => {
+    try{
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&countrycodes=es&format=json&addressdetails=1&limit=6&accept-language=es`);
+      const data = await res.json();
+      if(!data.length){ dd.style.display='none'; return; }
+      dd.style.display='block';
+      dd.innerHTML = data.map((r,i) => `
+        <div onclick="seleccionarDireccion(${i})" data-idx="${i}"
+          style="padding:0.7rem 1rem;cursor:pointer;border-bottom:0.5px solid var(--border);font-size:0.82rem;"
+          onmouseover="this.style.background='rgba(200,170,110,0.08)'" onmouseout="this.style.background=''">
+          📍 ${r.display_name}
+        </div>`).join('');
+      dd._data = data;
+    }catch(e){ dd.style.display='none'; }
+  }, 400);
+}
+
+function seleccionarDireccion(idx){
+  const dd = document.getElementById('direccion-dropdown');
+  const r = dd._data && dd._data[idx];
+  if(!r) return;
+  const a = r.address || {};
+  const calle = a.road || a.pedestrian || a.footway || '';
+  const numero = a.house_number || '';
+  const cp = a.postcode || '';
+  const ciudad = a.city || a.town || a.village || a.municipality || '';
+  document.getElementById('c-direccion').value = [calle, numero].filter(Boolean).join(', ');
+  document.getElementById('c-cp').value = cp;
+  document.getElementById('c-ciudad').value = ciudad;
+  document.getElementById('c-cp').readOnly = false;
+  document.getElementById('c-ciudad').readOnly = false;
+  dd.style.display='none';
+}
+
+// Init
+document.addEventListener('DOMContentLoaded',()=>{
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('a-fecha').value=today;
+  document.getElementById('k-fecha').value=today;
+  document.getElementById('c-cp').readOnly=false;
+  document.getElementById('c-ciudad').readOnly=false;
+  setEstado('Visible');
+  // Carga inicial de stock solo si no hay ningún vehículo registrado todavía
+  if(!load('vehiculos').length) cargarStockInicial();
+  updateStats();
+  renderDashCitas();
+});
+</script>
+</body>
+</html>
