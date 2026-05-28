@@ -1348,7 +1348,7 @@ function verHistorialCliente(id){
 </script>
 
 <!-- ══ MODAL CARTEL ══ -->
-<div class="modal-bg" id="modal-cartel" style="display:none;align-items:center;justify-content:center;">
+<div class="modal-bg" id="modal-cartel">
   <div style="background:var(--card);border:0.5px solid var(--border-warm);padding:2rem;width:100%;max-width:500px;position:relative;max-height:90vh;overflow-y:auto;">
     <div class="modal-title">Cartel <em style="font-style:italic;color:var(--gold)">imprimible</em></div>
     <button class="modal-close" onclick="closeModal('modal-cartel')">✕</button>
@@ -1362,7 +1362,6 @@ function verHistorialCliente(id){
 </div>
 
 <!-- QR lib -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
 
 <script>
@@ -1381,15 +1380,16 @@ const LOGOS_MARCAS = {
   'Moto Guzzi': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Moto-Guzzi-Logo.svg/300px-Moto-Guzzi-Logo.svg.png',
 };
 
-function generarCartel(id){
-  const v = load('vehiculos').find(x=>x.id===id);
-  if(!v) return;
+function qrImgTag(url){
+  const encoded = encodeURIComponent(url);
+  return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encoded}" width="110" height="110" style="display:block;" />`;
+}
+
+function cartelHTML(v){
   const logo = LOGOS_MARCAS[v.marca] || '';
   const extras = (v.extras||'').split('\n').filter(l=>l.trim()).map(l=>`<li style="font-size:15px;font-weight:700;padding:4px 0;list-style:none;">• ${l.trim()}</li>`).join('');
   const url = 'https://velocebikes.es';
-
-  const preview = document.getElementById('cartel-preview');
-  preview.innerHTML = `
+  return `
     <div style="text-align:center;border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:20px;">
       <div style="font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;font-family:Arial Black,sans-serif;">EN VENTA</div>
       <div style="font-size:20px;font-weight:700;letter-spacing:0.1em;margin-top:10px;">${(v.marca+' '+v.modelo).toUpperCase()}</div>
@@ -1408,22 +1408,19 @@ function generarCartel(id){
       <ul style="flex:1;padding:0;margin:0;">${extras}</ul>
       <div style="text-align:center;">
         <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#666;font-weight:700;margin-bottom:6px;">más información</div>
-        <canvas id="qr-cartel"></canvas>
+        ${qrImgTag(url)}
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;border-top:2px solid #111;padding-top:12px;margin-top:24px;font-family:Arial Black,sans-serif;font-weight:900;font-size:15px;">
-      <span>VELOCE BIKES</span>
-      <span>+34 684 71 47 92</span>
-    </div>
-  `;
+      <span>VELOCE BIKES</span><span>+34 684 71 47 92</span>
+    </div>`;
+}
 
+function generarCartel(id){
+  const v = load('vehiculos').find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('cartel-preview').innerHTML = cartelHTML(v);
   openModal('modal-cartel');
-
-  setTimeout(()=>{
-    if(typeof QRCode !== 'undefined'){
-      QRCode.toCanvas(document.getElementById('qr-cartel'), url, {width:110, margin:1, color:{dark:'#000',light:'#fff'}}, ()=>{});
-    }
-  }, 300);
 }
 
 function imprimirCartel(){
@@ -1431,10 +1428,9 @@ function imprimirCartel(){
   const ventana = window.open('','_blank','width=900,height=1100');
   ventana.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cartel Veloce Bikes</title>
   <style>body{margin:40px 60px;font-family:Arial,sans-serif;}@media print{body{margin:20mm;}}</style>
-  </head><body>${contenido}<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
-  <script>window.onload=function(){if(typeof QRCode!=='undefined'){QRCode.toCanvas(document.getElementById('qr-cartel'),'https://velocebikes.es',{width:110,margin:1,color:{dark:'#000',light:'#fff'}},function(){setTimeout(function(){window.print();},300)});}else{setTimeout(function(){window.print();},500);}}<\/script>
-  </body></html>`);
+  </head><body>${contenido}</body></html>`);
   ventana.document.close();
+  setTimeout(()=>ventana.print(), 800);
 }
 </script>
 
