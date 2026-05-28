@@ -529,7 +529,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
 const CLOUD = {name:'dsleoqcqf', preset:'velocebikes'};
 
 // ══ USUARIOS ══
-const USERS={admin:{pass:'Veloce11JCG',nombre:'Julio'},empleado1:{pass:'Veloce11HCP',nombre:'Hugo'},empleado2:{pass:'VeloceBikes#E2',nombre:'Empleado 2'}};
+const USERS={julio:{pass:'Veloce11JCG',nombre:'Julio'},hugo:{pass:'Veloce11HCP',nombre:'Hugo'},empleado2:{pass:'VeloceBikes#E2',nombre:'Empleado 2'}};
 
 // ══ LOGIN OBLIGATORIO ══
 let currentUser = null;
@@ -540,7 +540,7 @@ function showLoginScreen(){
 }
 
 function doLogin(){
-  const u = document.getElementById('ls-user').value.trim();
+  const u = document.getElementById('ls-user').value.trim().toLowerCase();
   const p = document.getElementById('ls-pass').value;
   if(USERS[u] && USERS[u].pass === p){
     currentUser = {user:u, ...USERS[u]};
