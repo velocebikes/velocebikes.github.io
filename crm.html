@@ -1364,6 +1364,80 @@ function verHistorialCliente(id){
 <!-- QR lib -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
+
+<script>
+const LOGOS_MARCAS = {
+  'BMW': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/300px-BMW.svg.png',
+  'Ducati': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Ducati_red_logo.svg/300px-Ducati_red_logo.svg.png',
+  'Yamaha': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Yamaha_Motor_logo.svg/300px-Yamaha_Motor_logo.svg.png',
+  'Honda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/300px-Honda.svg.png',
+  'Kawasaki': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kawasaki_logo.svg/300px-Kawasaki_logo.svg.png',
+  'Suzuki': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Suzuki_logo_2.svg/300px-Suzuki_logo_2.svg.png',
+  'KTM': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/KTM_logo.svg/300px-KTM_logo.svg.png',
+  'Triumph': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Triumph_Motorcycles_logo.svg/300px-Triumph_Motorcycles_logo.svg.png',
+  'Harley-Davidson': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Harley-Davidson_logo.svg/300px-Harley-Davidson_logo.svg.png',
+  'Aprilia': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Aprilia-logo.svg/300px-Aprilia-logo.svg.png',
+  'MV Agusta': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/MV_Agusta_logo.svg/300px-MV_Agusta_logo.svg.png',
+  'Moto Guzzi': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Moto-Guzzi-Logo.svg/300px-Moto-Guzzi-Logo.svg.png',
+};
+
+function generarCartel(id){
+  const v = load('vehiculos').find(x=>x.id===id);
+  if(!v) return;
+  const logo = LOGOS_MARCAS[v.marca] || '';
+  const extras = (v.extras||'').split('\n').filter(l=>l.trim()).map(l=>`<li style="font-size:15px;font-weight:700;padding:4px 0;list-style:none;">• ${l.trim()}</li>`).join('');
+  const url = 'https://velocebikes.es';
+
+  const preview = document.getElementById('cartel-preview');
+  preview.innerHTML = `
+    <div style="text-align:center;border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:20px;">
+      <div style="font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;font-family:Arial Black,sans-serif;">EN VENTA</div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:0.1em;margin-top:10px;">${(v.marca+' '+v.modelo).toUpperCase()}</div>
+    </div>
+    ${logo ? `<div style="text-align:center;margin:16px 0;"><img src="${logo}" style="max-height:55px;max-width:160px;object-fit:contain;" /></div>` : ''}
+    <div style="display:flex;justify-content:space-between;text-align:center;padding:16px 0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:16px 0;">
+      <div><div style="font-size:22px;font-weight:900;font-family:Arial Black,sans-serif;">${v.km?Number(v.km).toLocaleString('es-ES')+' km':'—'}</div><div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#666;margin-top:3px;">Kilómetros</div></div>
+      <div><div style="font-size:22px;font-weight:900;font-family:Arial Black,sans-serif;">${v.año||'—'}</div><div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#666;margin-top:3px;">Año</div></div>
+      <div><div style="font-size:22px;font-weight:900;font-family:Arial Black,sans-serif;">${v.cv?v.cv+' cv':'—'}</div><div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#666;margin-top:3px;">Potencia</div></div>
+    </div>
+    <div style="text-align:center;margin:16px 0;">
+      <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#888;">Precio</div>
+      <div style="font-size:44px;font-weight:900;font-family:Arial Black,sans-serif;letter-spacing:-1px;">${v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'—'}</div>
+    </div>
+    <div style="display:flex;gap:30px;align-items:flex-start;margin-top:16px;">
+      <ul style="flex:1;padding:0;margin:0;">${extras}</ul>
+      <div style="text-align:center;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#666;font-weight:700;margin-bottom:6px;">más información</div>
+        <canvas id="qr-cartel"></canvas>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;border-top:2px solid #111;padding-top:12px;margin-top:24px;font-family:Arial Black,sans-serif;font-weight:900;font-size:15px;">
+      <span>VELOCE BIKES</span>
+      <span>+34 684 71 47 92</span>
+    </div>
+  `;
+
+  openModal('modal-cartel');
+
+  setTimeout(()=>{
+    if(typeof QRCode !== 'undefined'){
+      QRCode.toCanvas(document.getElementById('qr-cartel'), url, {width:110, margin:1, color:{dark:'#000',light:'#fff'}}, ()=>{});
+    }
+  }, 300);
+}
+
+function imprimirCartel(){
+  const contenido = document.getElementById('cartel-preview').innerHTML;
+  const ventana = window.open('','_blank','width=900,height=1100');
+  ventana.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cartel Veloce Bikes</title>
+  <style>body{margin:40px 60px;font-family:Arial,sans-serif;}@media print{body{margin:20mm;}}</style>
+  </head><body>${contenido}<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
+  <script>window.onload=function(){if(typeof QRCode!=='undefined'){QRCode.toCanvas(document.getElementById('qr-cartel'),'https://velocebikes.es',{width:110,margin:1,color:{dark:'#000',light:'#fff'}},function(){setTimeout(function(){window.print();},300)});}else{setTimeout(function(){window.print();},500);}}<\/script>
+  </body></html>`);
+  ventana.document.close();
+}
+</script>
+
 </div><!-- /crm-app -->
 </body>
 </html>
