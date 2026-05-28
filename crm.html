@@ -765,7 +765,8 @@ function renderClientes(){
       <td>${c.tlf||'—'}</td>
       <td style="font-size:0.78rem">${c.email||'—'}</td>
       <td style="font-size:0.78rem">${c.ciudad||'—'}</td>
-      <td style="display:flex;gap:0.4rem;">
+      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn-outline btn-sm" onclick="verHistorialCliente(${c.id})">Historial</button>
         <button class="btn-outline btn-sm" onclick="openModalCliente(${c.id})">Editar</button>
         <button class="btn-danger" onclick="deleteCliente(${c.id})">Eliminar</button>
       </td>
@@ -1215,6 +1216,75 @@ document.addEventListener('DOMContentLoaded',()=>{
   updateStats();
   renderDashCitas();
 });
+</script>
+<!-- MODAL HISTORIAL CLIENTE -->
+<div class="modal-bg" id="modal-historial">
+  <div class="modal" style="max-width:800px;">
+    <div class="modal-header">
+      <div class="modal-title">Historial <em style="font-style:italic;color:var(--gold)" id="historial-nombre"></em></div>
+      <button class="modal-close" onclick="closeModal('modal-historial')">✕</button>
+    </div>
+    <div class="modal-body" id="historial-body"></div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-historial')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function verHistorialCliente(id){
+  const c=load('clientes').find(x=>x.id===id);
+  if(!c)return;
+  const contratos=load('contratos').filter(k=>k.dni===c.dni);
+  const tipoLabel={deposito:'Depósito',compra:'Compra',reserva:'Reserva',venta:'Venta'};
+  const tipoBadge={deposito:'badge-gold',compra:'badge-blue',reserva:'badge-muted',venta:'badge-green'};
+  document.getElementById('historial-nombre').textContent=`${c.nombre} ${c.apellidos}`;
+
+  let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-bottom:2rem;">
+    <div style="background:var(--card);padding:1rem 1.25rem;">
+      <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">DNI / NIE</div>
+      <div style="font-size:0.88rem;">${c.dni}</div>
+    </div>
+    <div style="background:var(--card);padding:1rem 1.25rem;">
+      <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Teléfono</div>
+      <div style="font-size:0.88rem;">${c.tlf||'—'}</div>
+    </div>
+    <div style="background:var(--card);padding:1rem 1.25rem;">
+      <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Contratos</div>
+      <div style="font-size:0.88rem;">${contratos.length}</div>
+    </div>
+  </div>`;
+
+  if(!contratos.length){
+    html+=`<div class="empty"><div class="empty-icon">📄</div><div class="empty-text">Este cliente no tiene contratos todavía</div></div>`;
+  } else {
+    html+=`<div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;">Contratos realizados</div>`;
+    html+=`<table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.8rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;">Fecha</th>
+        <th style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.8rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;">Tipo</th>
+        <th style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.8rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;">Vehículo</th>
+        <th style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.8rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;">Precio</th>
+        <th style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.8rem;text-align:left;border-bottom:0.5px solid var(--border);font-weight:400;"></th>
+      </tr></thead>
+      <tbody>
+      ${contratos.map(k=>`
+        <tr>
+          <td style="font-size:0.78rem;padding:0.8rem;border-bottom:0.5px solid rgba(255,255,255,0.04);color:var(--muted);">${formatDate(k.fecha)}</td>
+          <td style="padding:0.8rem;border-bottom:0.5px solid rgba(255,255,255,0.04);"><span class="badge ${tipoBadge[k.tipo]||'badge-muted'}">${tipoLabel[k.tipo]||k.tipo}</span></td>
+          <td style="font-size:0.82rem;padding:0.8rem;border-bottom:0.5px solid rgba(255,255,255,0.04);">${k.modelo}${k.matricula?' · '+k.matricula:''}</td>
+          <td style="font-size:0.82rem;padding:0.8rem;border-bottom:0.5px solid rgba(255,255,255,0.04);font-weight:500;">${k.precio?Number(k.precio).toLocaleString('es-ES')+' €':'—'}</td>
+          <td style="padding:0.8rem;border-bottom:0.5px solid rgba(255,255,255,0.04);">
+            <button class="btn-primary btn-sm" onclick="closeModal('modal-historial');verContrato(${k.id})">Ver contrato</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  document.getElementById('historial-body').innerHTML=html;
+  openModal('modal-historial');
+}
 </script>
 </body>
 </html>
