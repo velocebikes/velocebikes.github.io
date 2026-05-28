@@ -733,6 +733,7 @@ function renderVehiculos(){
       <td>${estadoBadge(v.estado)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn-outline btn-sm" onclick="openModalVehiculo(${v.id})">Editar</button>
+        <button class="btn-outline btn-sm" onclick="generarCartel(${v.id})" style="color:var(--gold);border-color:var(--gold);">🖨 Cartel</button>
         <button class="btn-danger" onclick="deleteVehiculo(${v.id})">Eliminar</button>
       </td>
     </tr>`).join('');
@@ -1345,6 +1346,24 @@ function verHistorialCliente(id){
   openModal('modal-historial');
 }
 </script>
+
+<!-- ══ MODAL CARTEL ══ -->
+<div class="modal-bg" id="modal-cartel" style="display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:0.5px solid var(--border-warm);padding:2rem;width:100%;max-width:500px;position:relative;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">Cartel <em style="font-style:italic;color:var(--gold)">imprimible</em></div>
+    <button class="modal-close" onclick="closeModal('modal-cartel')">✕</button>
+    <div style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:flex-end;">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-cartel')">Cerrar</button>
+      <button class="btn-primary btn-sm" onclick="imprimirCartel()">🖨 Imprimir / PDF</button>
+    </div>
+    <div id="cartel-preview" style="margin-top:1.5rem;background:white;padding:40px;border:1px solid #ddd;font-family:Arial,sans-serif;color:#111;">
+    </div>
+  </div>
+</div>
+
+<!-- QR lib -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
 </div><!-- /crm-app -->
 </body>
 </html>
