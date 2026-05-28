@@ -1352,7 +1352,14 @@ function verHistorialCliente(id){
   <div style="background:var(--card);border:0.5px solid var(--border-warm);padding:2rem;width:100%;max-width:500px;position:relative;max-height:90vh;overflow-y:auto;">
     <div class="modal-title">Cartel <em style="font-style:italic;color:var(--gold)">imprimible</em></div>
     <button class="modal-close" onclick="closeModal('modal-cartel')">✕</button>
-    <div style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:flex-end;">
+    <div style="margin-top:1.2rem;">
+      <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Enlace del anuncio (QR)</label>
+      <div style="display:flex;gap:0.5rem;">
+        <input type="text" id="cartel-url" placeholder="https://www.motos.net/..." style="flex:1;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.6rem 0.8rem;font-size:0.82rem;outline:none;"/>
+        <button class="btn-outline btn-sm" onclick="actualizarQR()">Actualizar QR</button>
+      </div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
       <button class="btn-outline btn-sm" onclick="closeModal('modal-cartel')">Cerrar</button>
       <button class="btn-primary btn-sm" onclick="imprimirCartel()">🖨 Imprimir / PDF</button>
     </div>
@@ -1366,18 +1373,18 @@ function verHistorialCliente(id){
 
 <script>
 const LOGOS_MARCAS = {
-  'BMW': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/300px-BMW.svg.png',
-  'Ducati': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Ducati_red_logo.svg/300px-Ducati_red_logo.svg.png',
-  'Yamaha': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Yamaha_Motor_logo.svg/300px-Yamaha_Motor_logo.svg.png',
-  'Honda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/300px-Honda.svg.png',
-  'Kawasaki': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Kawasaki_logo.svg/300px-Kawasaki_logo.svg.png',
-  'Suzuki': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Suzuki_logo_2.svg/300px-Suzuki_logo_2.svg.png',
-  'KTM': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/KTM_logo.svg/300px-KTM_logo.svg.png',
-  'Triumph': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Triumph_Motorcycles_logo.svg/300px-Triumph_Motorcycles_logo.svg.png',
-  'Harley-Davidson': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Harley-Davidson_logo.svg/300px-Harley-Davidson_logo.svg.png',
-  'Aprilia': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Aprilia-logo.svg/300px-Aprilia-logo.svg.png',
-  'MV Agusta': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/MV_Agusta_logo.svg/300px-MV_Agusta_logo.svg.png',
-  'Moto Guzzi': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Moto-Guzzi-Logo.svg/300px-Moto-Guzzi-Logo.svg.png',
+  'BMW': 'https://www.carlogos.org/car-logos/bmw-logo-2020-blue-white.png',
+  'Ducati': 'https://www.carlogos.org/motorcycle-logos/ducati-logo.png',
+  'Yamaha': 'https://www.carlogos.org/motorcycle-logos/yamaha-logo.png',
+  'Honda': 'https://www.carlogos.org/car-logos/honda-logo.png',
+  'Kawasaki': 'https://www.carlogos.org/motorcycle-logos/kawasaki-logo.png',
+  'Suzuki': 'https://www.carlogos.org/car-logos/suzuki-logo.png',
+  'KTM': 'https://www.carlogos.org/motorcycle-logos/ktm-logo.png',
+  'Triumph': 'https://www.carlogos.org/motorcycle-logos/triumph-motorcycles-logo.png',
+  'Harley-Davidson': 'https://www.carlogos.org/motorcycle-logos/harley-davidson-logo.png',
+  'Aprilia': 'https://www.carlogos.org/motorcycle-logos/aprilia-logo.png',
+  'MV Agusta': 'https://www.carlogos.org/motorcycle-logos/mv-agusta-logo.png',
+  'Moto Guzzi': 'https://www.carlogos.org/motorcycle-logos/moto-guzzi-logo.png',
 };
 
 function qrImgTag(url){
@@ -1385,10 +1392,9 @@ function qrImgTag(url){
   return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encoded}&bgcolor=ffffff&color=000000" width="120" height="120" style="display:block;" />`;
 }
 
-function cartelHTML(v){
+function cartelHTML(v, url='https://velocebikes.es'){
   const logo = LOGOS_MARCAS[v.marca] || '';
   const extras = (v.extras||'').split('\n').filter(l=>l.trim()).map(l=>`<li style="font-size:13px;font-weight:600;padding:3px 0;font-family:Georgia,serif;">${l.trim()}</li>`).join('');
-  const url = 'https://velocebikes.es';
   const km = v.km ? Number(v.km).toLocaleString('es-ES')+'km' : '—';
   const cv = v.cv ? v.cv+'cv' : '—';
   const año = v.año || '—';
@@ -1432,8 +1438,17 @@ function cartelHTML(v){
 function generarCartel(id){
   const v = load('vehiculos').find(x=>x.id===id);
   if(!v) return;
-  document.getElementById('cartel-preview').innerHTML = cartelHTML(v);
+  window._cartelVehiculo = v;
+  document.getElementById('cartel-url').value = 'https://velocebikes.es';
+  document.getElementById('cartel-preview').innerHTML = cartelHTML(v, 'https://velocebikes.es');
   openModal('modal-cartel');
+}
+
+function actualizarQR(){
+  const v = window._cartelVehiculo;
+  if(!v) return;
+  const url = document.getElementById('cartel-url').value || 'https://velocebikes.es';
+  document.getElementById('cartel-preview').innerHTML = cartelHTML(v, url);
 }
 
 function imprimirCartel(){
