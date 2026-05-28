@@ -944,47 +944,8 @@ renderStockPublico();
   <ul class="footer-links">
     <li><a href="#">Aviso legal</a></li>
     <li><a href="#">Privacidad</a></li>
-    <li><a href="#" onclick="document.getElementById('login-modal').style.display='flex';return false;" style="color:var(--muted2);">Acceso empleados</a></li>
+    <li><a href="crm.html" style="color:var(--muted2);">Acceso empleados</a></li>
   </ul>
-
-<!-- LOGIN MODAL -->
-<div id="login-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
-  <div style="background:var(--card);border:0.5px solid var(--border-warm);padding:3rem;width:100%;max-width:380px;position:relative;">
-    <button onclick="document.getElementById('login-modal').style.display='none'" style="position:absolute;top:1rem;right:1.2rem;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">✕</button>
-    <div style="font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:0.5rem;">Veloce Bikes</div>
-    <div style="font-family:var(--font-serif);font-size:1.8rem;font-weight:300;margin-bottom:2rem;">Acceso<br><em style="color:var(--gold);">empleados</em></div>
-    <div style="margin-bottom:1.2rem;">
-      <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Usuario</label>
-      <input id="login-user" type="text" placeholder="Tu usuario" style="width:100%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.8rem 1rem;font-family:var(--font-sans);font-size:0.88rem;outline:none;"/>
-    </div>
-    <div style="margin-bottom:1.8rem;">
-      <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Contraseña</label>
-      <input id="login-pass" type="password" placeholder="••••••••" style="width:100%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.8rem 1rem;font-family:var(--font-sans);font-size:0.88rem;outline:none;"/>
-    </div>
-    <div id="login-error" style="display:none;font-size:0.75rem;color:#e07070;margin-bottom:1rem;letter-spacing:0.05em;">Usuario o contraseña incorrectos.</div>
-    <button onclick="handleLogin()" style="width:100%;background:var(--gold);color:#080807;border:none;padding:0.9rem;font-family:var(--font-sans);font-size:0.7rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;">Entrar</button>
-  </div>
-</div>
-
-<script>
-function handleLogin() {
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  // Credenciales — cámbialas cuando quieras
-  const users = {
-    'admin':     'veloce2025',
-    'empleado1': 'bikes2025',
-    'empleado2': 'bikes2025',
-  };
-  if (users[user] && users[user] === pass) {
-    window.location.href = 'crm.html?u=' + encodeURIComponent(user);
-  } else {
-    document.getElementById('login-error').style.display = 'block';
-  }
-}
-document.getElementById('login-user')?.addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
-document.getElementById('login-pass')?.addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
-</script>
 </footer>
 
 <!-- WhatsApp flotante -->
