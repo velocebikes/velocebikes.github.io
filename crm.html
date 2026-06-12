@@ -195,6 +195,9 @@ textarea.f-input{resize:vertical;min-height:80px;}
   <div class="topbar-logo">Veloce<em>.</em>Bikes <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin-left:0.5rem;">CRM</span></div>
   <div class="topbar-right">
     <span class="topbar-user" id="topbar-user"></span>
+    <button class="btn-logout" onclick="exportarBackup()">⬇ Backup</button>
+    <button class="btn-logout" onclick="document.getElementById('import-file').click()">⬆ Restaurar</button>
+    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importarBackup(event)">
     <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
   </div>
 </div>
@@ -595,6 +598,47 @@ function goTo(page, el){
 // ══ STORAGE ══
 function load(k){try{return JSON.parse(localStorage.getItem('vcr_'+k))||[];}catch{return[];}}
 function save(k,v){localStorage.setItem('vcr_'+k,JSON.stringify(v));}
+
+function exportarBackup(){
+  const data={
+    vehiculos: load('vehiculos'),
+    clientes: load('clientes'),
+    contratos: load('contratos'),
+    citas: load('citas'),
+    fecha: new Date().toISOString()
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const fecha=new Date().toISOString().slice(0,10);
+  a.href=url;
+  a.download=`veloce-backup-${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importarBackup(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!confirm('¿Seguro que quieres restaurar este backup? Esto SOBRESCRIBIRÁ todos los datos actuales (vehículos, clientes, contratos y citas).')) return;
+      if(data.vehiculos) save('vehiculos', data.vehiculos);
+      if(data.clientes) save('clientes', data.clientes);
+      if(data.contratos) save('contratos', data.contratos);
+      if(data.citas) save('citas', data.citas);
+      alert('Backup restaurado correctamente. La página se va a recargar.');
+      location.reload();
+    }catch(err){
+      alert('Error al leer el archivo de backup. Asegúrate de que es un archivo .json válido exportado desde este CRM.');
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ══ MODALES ══
 function openModal(id){document.getElementById(id).classList.add('open');}
@@ -1035,8 +1079,8 @@ function verContrato(id){
   </table>`;
 
   const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;">
-    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:3.5rem;padding-top:0.5rem;font-size:10pt;">${a}</div></div>
-    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:3.5rem;padding-top:0.5rem;font-size:10pt;">${b}</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:6rem;padding-top:0.5rem;font-size:10pt;">${a}</div></div>
+    <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:6rem;padding-top:0.5rem;font-size:10pt;">${b}</div></div>
   </div>`;
 
   const condBlock=k.condiciones?`<h3>CONDICIONES PARTICULARES</h3><p>De forma adicional, las partes acuerdan las siguientes condiciones particulares: ${k.condiciones}</p>`:'';
@@ -1087,6 +1131,7 @@ function verContrato(id){
     <p><strong>Cuarta. Transmisión de propiedad.</strong><br>La propiedad se transmite a VELOCE CARS en el momento del pago. EL VENDEDOR se compromete a facilitar todos los documentos necesarios para la transferencia.</p>
     <p><strong>Quinta. Documentación.</strong><br>EL VENDEDOR entrega en el acto: permiso de circulación, ficha técnica, documentación acreditativa de la titularidad y, en su caso, justificante del último ITV favorable.</p>
     <p><strong>Sexta. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    <p><strong>Séptima. Estado del vehículo y vicios ocultos.</strong><br>La parte compradora declara conocer el estado general del vehículo y aceptarlo en las condiciones en que se encuentra, sin perjuicio de que la parte vendedora responderá frente a la parte compradora por los vicios ocultos existentes con anterioridad a la venta, conforme a la normativa aplicable.</p>
     ${condBlock}
     <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
     ${firmas('VELOCE CARS BOUTIQUE S.L. (Comprador)<br>Firma: ______________________<br>Nombre: _____________________',`EL VENDEDOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
