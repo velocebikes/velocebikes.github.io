@@ -1572,65 +1572,51 @@ function facturaHTML(k, opts){
     ivaImporte = 0;
     total = precio;
   }
-  const fmt = n => Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+  const fmt = n => Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20ac';
   const fechaFmt = opts.fecha ? opts.fecha.split('-').reverse().join('/') : '';
-  const obsLine = opts.obs || '';
+  const obsLines = (opts.obs||'').split('\n').filter(l=>l.trim());
 
-  return `<div style="font-family:Arial,sans-serif;color:#111;max-width:480px;margin:0 auto;font-size:13px;">
-    <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px;">
-      <div style="font-size:24px;font-weight:900;letter-spacing:0.1em;">FACTURA</div>
-    </div>
+  const row = (label, value) => `<tr><td style="padding:2px 0;vertical-align:top;width:170px;">${label}</td><td style="padding:2px 0;">${value}</td></tr>`;
 
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;">
-      <div><strong>Nº de factura:</strong> ${opts.numero}</div>
-      <div><strong>Fecha de factura:</strong> ${fechaFmt}</div>
-    </div>
+  return `<div style="font-family:'Times New Roman',Times,serif;color:#111;max-width:480px;margin:0 auto;font-size:13px;line-height:1.5;">
+    <div style="text-align:center;font-size:20px;font-weight:bold;letter-spacing:0.05em;margin-bottom:10px;">FACTURA</div>
 
-    <div style="display:flex;gap:24px;margin:18px 0;">
-      <div style="flex:1;">
-        <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:4px;">VENDEDOR</div>
-        <div style="font-size:12px;line-height:1.5;">
-          VELOCE CARS BOUTIQUE SL<br>
-          CIF: B55499149<br>
-          Av. Luis García Cereceda 5<br>
-          28223 Pozuelo de Alarcón
-        </div>
-      </div>
-      <div style="flex:1;">
-        <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:4px;">COMPRADOR</div>
-        <div style="font-size:12px;line-height:1.5;">
-          ${(k.nombre+' '+k.apellidos).toUpperCase()}<br>
-          DNI: ${k.dni||''}<br>
-          ${k.dir||''}
-        </div>
-      </div>
-    </div>
-
-    <div style="margin:14px 0;font-size:12px;"><strong>CONCEPTO</strong> Venta vehículo</div>
-
-    <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:6px;">DATOS DEL VEHÍCULO</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
-      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Vehículo</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${(k.modelo||'').toUpperCase()}${k.año?' '+k.año:''}</td></tr>
-      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Matrícula</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${k.matricula||''}</td></tr>
-      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Kilometraje</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${k.km?Number(k.km).toLocaleString('es-ES')+' km':''}</td></tr>
-      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Base imponible</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${fmt(base)}</td></tr>
-      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">IVA ${opts.tipoIva==='iva'?'deducible':'deducible'} (${ivaPct}%)</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${fmt(ivaImporte)}</td></tr>
-      <tr><td style="padding:6px 0;font-weight:900;">Precio total</td><td style="padding:6px 0;text-align:right;font-weight:900;">${fmt(total)}</td></tr>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      ${row('N\u00ba de factura: '+opts.numero, 'Fecha de factura: '+fechaFmt)}
     </table>
 
-    <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:6px;">OBSERVACIONES</div>
-    <div style="font-size:12px;margin-bottom:30px;">${obsLine}</div>
+    <div style="font-weight:bold;margin-top:6px;">VENDEDOR</div>
+    <div>VELOCE CARS BOUTIQUE SL</div>
+    <div>CIF: B55499149</div>
+    <div>Av. Luis Garc\u00eda Cereceda 5</div>
+    <div>28223 Pozuelo de Alarc\u00f3n</div>
 
-    <div style="display:flex;justify-content:space-between;margin-top:50px;font-size:12px;">
-      <div style="text-align:center;width:45%;">
-        <div style="border-top:1px solid #333;padding-top:6px;">Firma del vendedor</div>
-      </div>
-      <div style="text-align:center;width:45%;">
-        <div style="border-top:1px solid #333;padding-top:6px;">Firma del comprador</div>
-      </div>
-    </div>
+    <div style="font-weight:bold;margin-top:10px;">COMPRADOR</div>
+    <div>${(k.nombre+' '+k.apellidos).toUpperCase()}</div>
+    <div>DNI: ${k.dni||''}</div>
+    <div>${k.dir||''}</div>
 
-    <div style="margin-top:24px;font-size:11px;">IBAN: ES22 0081 5338 3600 0170 6873</div>
+    <div style="margin-top:10px;"><strong>CONCEPTO</strong> Venta veh\u00edculo</div>
+
+    <div style="font-weight:bold;margin-top:10px;">DATOS DEL VEH\u00cdCULO</div>
+    <table style="width:100%;border-collapse:collapse;">
+      ${row('Veh\u00edculo', (k.modelo||'').toUpperCase()+(k.año?' '+k.año:''))}
+      ${row('Matr\u00edcula', k.matricula||'')}
+      ${row('Kilometraje', (k.km?Number(k.km).toLocaleString('es-ES'):'')+' km')}
+      ${row('Base imponible', fmt(base))}
+      ${row('IVA deducible ('+ivaPct+'%)', fmt(ivaImporte))}
+      ${row('Precio total', fmt(total))}
+    </table>
+
+    <div style="font-weight:bold;margin-top:10px;">OBSERVACIONES</div>
+    ${obsLines.map(l=>`<div>${l}</div>`).join('')}
+
+    <table style="width:100%;border-collapse:collapse;margin-top:40px;">
+      ${row('Firma del vendedor', 'Firma del comprador')}
+      ${row('_________________________', '_________________________')}
+    </table>
+
+    <div style="margin-top:16px;">IBAN: ES22 0081 5338 3600 0170 6873</div>
   </div>`;
 }
 
