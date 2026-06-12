@@ -1025,6 +1025,7 @@ function renderContratos(){
       <td style="display:flex;gap:0.5rem;">
         <button class="btn-outline btn-sm" onclick="editContrato(${k.id})">Editar</button>
         <button class="btn-primary btn-sm" onclick="verContrato(${k.id})">Ver / Imprimir</button>
+        ${k.tipo==='venta'?`<button class="btn-outline btn-sm" onclick="generarFactura(${k.id})" style="color:var(--gold);border-color:var(--gold);">🧾 Factura</button>`:''}
         <button class="btn-danger" onclick="deleteContrato(${k.id})">Eliminar</button>
       </td>
     </tr>`).join('');
@@ -1413,6 +1414,51 @@ function verHistorialCliente(id){
   </div>
 </div>
 
+<!-- ══ MODAL FACTURA ══ -->
+<div class="modal-bg" id="modal-factura">
+  <div style="background:var(--card);border:0.5px solid var(--border-warm);padding:2rem;width:100%;max-width:560px;position:relative;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">Factura <em style="font-style:italic;color:var(--gold)">de venta</em></div>
+    <button class="modal-close" onclick="closeModal('modal-factura')">✕</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.2rem;">
+      <div>
+        <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Nº de factura</label>
+        <input type="text" id="fac-numero" style="width:100%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.6rem 0.8rem;font-size:0.82rem;outline:none;"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Fecha</label>
+        <input type="date" id="fac-fecha" style="width:100%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.6rem 0.8rem;font-size:0.82rem;outline:none;"/>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Tipo de operación</label>
+      <div style="display:flex;gap:1.5rem;">
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;cursor:pointer;">
+          <input type="radio" name="fac-tipo-iva" value="rebu" id="fac-rebu" checked onchange="actualizarFactura()"> REBU (IVA 0%)
+        </label>
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;cursor:pointer;">
+          <input type="radio" name="fac-tipo-iva" value="iva" id="fac-iva" onchange="actualizarFactura()"> IVA deducible (21%)
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <label style="display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Observaciones</label>
+      <input type="text" id="fac-obs" style="width:100%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);padding:0.6rem 0.8rem;font-size:0.82rem;outline:none;" placeholder="Garantía Oficial / Garantía Veloce 1 año..."/>
+    </div>
+
+    <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-factura')">Cerrar</button>
+      <button class="btn-primary btn-sm" onclick="actualizarFactura()">Actualizar</button>
+      <button class="btn-primary btn-sm" onclick="imprimirFactura()">🖨 Imprimir / PDF</button>
+    </div>
+
+    <div id="factura-preview" style="margin-top:1.5rem;background:white;padding:40px;border:1px solid #ddd;font-family:Arial,sans-serif;color:#111;">
+    </div>
+  </div>
+</div>
+
 <!-- QR lib -->
 
 
@@ -1505,6 +1551,140 @@ function imprimirCartel(){
   ventana.document.close();
   setTimeout(()=>ventana.print(), 800);
 }
+
+// ══ FACTURAS ══
+function siguienteNumFactura(){
+  let n = parseInt(localStorage.getItem('vcr_factura_num')||'70',10);
+  return (n+1);
+}
+
+function facturaHTML(k, opts){
+  const precio = k.precio ? Number(k.precio) : 0;
+  let base, ivaImporte, ivaPct, total;
+  if(opts.tipoIva==='iva'){
+    ivaPct = 21;
+    base = precio / 1.21;
+    ivaImporte = precio - base;
+    total = precio;
+  } else {
+    ivaPct = 0;
+    base = precio;
+    ivaImporte = 0;
+    total = precio;
+  }
+  const fmt = n => Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+  const fechaFmt = opts.fecha ? opts.fecha.split('-').reverse().join('/') : '';
+  const obsLine = opts.obs || '';
+
+  return `<div style="font-family:Arial,sans-serif;color:#111;max-width:480px;margin:0 auto;font-size:13px;">
+    <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px;">
+      <div style="font-size:24px;font-weight:900;letter-spacing:0.1em;">FACTURA</div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+      <div><strong>Nº de factura:</strong> ${opts.numero}</div>
+      <div><strong>Fecha de factura:</strong> ${fechaFmt}</div>
+    </div>
+
+    <div style="display:flex;gap:24px;margin:18px 0;">
+      <div style="flex:1;">
+        <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:4px;">VENDEDOR</div>
+        <div style="font-size:12px;line-height:1.5;">
+          VELOCE CARS BOUTIQUE SL<br>
+          CIF: B55499149<br>
+          Av. Luis García Cereceda 5<br>
+          28223 Pozuelo de Alarcón
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:4px;">COMPRADOR</div>
+        <div style="font-size:12px;line-height:1.5;">
+          ${(k.nombre+' '+k.apellidos).toUpperCase()}<br>
+          DNI: ${k.dni||''}<br>
+          ${k.dir||''}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin:14px 0;font-size:12px;"><strong>CONCEPTO</strong> Venta vehículo</div>
+
+    <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:6px;">DATOS DEL VEHÍCULO</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
+      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Vehículo</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${(k.modelo||'').toUpperCase()}${k.año?' '+k.año:''}</td></tr>
+      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Matrícula</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${k.matricula||''}</td></tr>
+      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Kilometraje</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${k.km?Number(k.km).toLocaleString('es-ES')+' km':''}</td></tr>
+      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">Base imponible</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${fmt(base)}</td></tr>
+      <tr><td style="padding:4px 0;border-bottom:1px solid #ddd;">IVA ${opts.tipoIva==='iva'?'deducible':'deducible'} (${ivaPct}%)</td><td style="padding:4px 0;border-bottom:1px solid #ddd;text-align:right;">${fmt(ivaImporte)}</td></tr>
+      <tr><td style="padding:6px 0;font-weight:900;">Precio total</td><td style="padding:6px 0;text-align:right;font-weight:900;">${fmt(total)}</td></tr>
+    </table>
+
+    <div style="font-weight:900;font-size:11px;letter-spacing:0.1em;margin-bottom:6px;">OBSERVACIONES</div>
+    <div style="font-size:12px;margin-bottom:30px;">${obsLine}</div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:50px;font-size:12px;">
+      <div style="text-align:center;width:45%;">
+        <div style="border-top:1px solid #333;padding-top:6px;">Firma del vendedor</div>
+      </div>
+      <div style="text-align:center;width:45%;">
+        <div style="border-top:1px solid #333;padding-top:6px;">Firma del comprador</div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;font-size:11px;">IBAN: ES22 0081 5338 3600 0170 6873</div>
+  </div>`;
+}
+
+function generarFactura(id){
+  const k = load('contratos').find(x=>x.id===id);
+  if(!k) return;
+  window._facturaContrato = k;
+  document.getElementById('fac-numero').value = siguienteNumFactura();
+  document.getElementById('fac-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('fac-rebu').checked = (k.garantiaTipo!=='oficial');
+  document.getElementById('fac-iva').checked = (k.garantiaTipo==='oficial');
+  if(k.garantiaTipo==='oficial'){
+    document.getElementById('fac-obs').value = 'IVA deducible. Garantía Oficial.';
+  } else {
+    document.getElementById('fac-obs').value = 'Operación sujeta a REBU.';
+  }
+  actualizarFactura();
+  openModal('modal-factura');
+}
+
+function actualizarFactura(){
+  const k = window._facturaContrato;
+  if(!k) return;
+  const tipoIva = document.getElementById('fac-iva').checked ? 'iva' : 'rebu';
+  // Auto-completar observaciones si coincide con el texto por defecto del otro tipo, o está vacío
+  const obsActual = document.getElementById('fac-obs').value.trim();
+  const textoRebu = 'Operación sujeta a REBU.';
+  const textoIva = 'IVA deducible.';
+  if(obsActual==='' || obsActual===textoRebu || obsActual===textoIva || obsActual==='Garantía Oficial.'){
+    let nuevo = tipoIva==='rebu' ? textoRebu : textoIva;
+    if(k.garantiaTipo==='oficial') nuevo += ' Garantía Oficial.';
+    document.getElementById('fac-obs').value = nuevo;
+  }
+  const opts = {
+    numero: document.getElementById('fac-numero').value,
+    fecha: document.getElementById('fac-fecha').value,
+    tipoIva: tipoIva,
+    obs: document.getElementById('fac-obs').value
+  };
+  document.getElementById('factura-preview').innerHTML = facturaHTML(k, opts);
+}
+
+function imprimirFactura(){
+  const numero = document.getElementById('fac-numero').value;
+  localStorage.setItem('vcr_factura_num', numero);
+  const contenido = document.getElementById('factura-preview').innerHTML;
+  const ventana = window.open('','_blank','width=700,height=1000');
+  ventana.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura ${numero} - Veloce Cars</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:white;padding:30px;}@media print{@page{margin:15mm;}body{padding:0;}}</style>
+  </head><body>${contenido}</body></html>`);
+  ventana.document.close();
+  setTimeout(()=>ventana.print(), 500);
+}
+
 </script>
 
 </div><!-- /crm-app -->
