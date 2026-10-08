@@ -258,6 +258,33 @@ textarea.f-input{resize:vertical;min-height:80px;}
 @media(max-width:1100px){.agenda-layout{grid-template-columns:1fr;}.dia{position:static;max-height:none;}}
 @media(max-width:768px){.cal-day{min-height:58px;}.cal-ev{display:none;}.cal-day .cal-dots{display:flex;}.docs-upload{grid-template-columns:1fr;}}
 .cal-dots{display:none;gap:3px;padding-left:4px;} .cal-dots i{width:5px;height:5px;border-radius:50%;display:block;}
+
+/* MÓVIL: menú lateral desplegable */
+.menu-btn{display:none;background:none;border:none;width:40px;height:40px;padding:10px 8px;cursor:pointer;flex-direction:column;justify-content:space-between;margin-right:0.5rem;}
+.menu-btn span{display:block;height:1.5px;background:var(--text);transition:transform .2s,opacity .2s;}
+.menu-btn[aria-expanded="true"] span:nth-child(1){transform:translateY(8.5px) rotate(45deg);}
+.menu-btn[aria-expanded="true"] span:nth-child(2){opacity:0;}
+.menu-btn[aria-expanded="true"] span:nth-child(3){transform:translateY(-8.5px) rotate(-45deg);}
+.menu-backdrop{display:none;}
+.mobile-only{display:none!important;}
+@media(max-width:768px){
+  .topbar{padding:0 1rem;justify-content:flex-start;}
+  .topbar-right{margin-left:auto;gap:0.6rem;}
+  .topbar-right .btn-logout,.topbar-user{display:none;}
+  .menu-btn{display:flex;}
+  .sidebar{display:block!important;transform:translateX(-100%);transition:transform .25s ease;width:260px;z-index:450;padding-bottom:2rem;}
+  .sidebar.open{transform:translateX(0);box-shadow:8px 0 30px rgba(0,0,0,0.5);}
+  .menu-backdrop.open{display:block;position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,0.6);z-index:440;}
+  .mobile-only{display:flex!important;}
+  .nav-section.mobile-only{display:block!important;}
+  .nav-item{padding-top:0.85rem;padding-bottom:0.85rem;}
+  .page{padding:1.5rem 1rem;}
+  .page-header{flex-wrap:wrap;gap:1rem;}
+  .table-wrap{overflow-x:auto;}
+  .table-toolbar{flex-wrap:wrap;gap:0.6rem;}
+  .modal-bg{padding:0;align-items:stretch;}
+  .modal{max-height:100vh;height:100%;max-width:none!important;}
+}
 </style>
 </head>
 <body>
@@ -285,6 +312,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
 
 <!-- TOPBAR -->
 <div class="topbar">
+  <button class="menu-btn" id="menu-btn" onclick="toggleMenu()" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
   <div class="topbar-logo">Veloce<em>.</em>Bikes <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin-left:0.5rem;">CRM</span></div>
   <div class="topbar-right">
     <span class="topbar-user" id="topbar-user"></span>
@@ -322,8 +350,13 @@ textarea.f-input{resize:vertical;min-height:80px;}
   <div class="nav-item" id="nav-conta" onclick="goTo('contabilidad',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Contabilidad
   </div>
+  <div class="nav-section mobile-only">Cuenta</div>
+  <div class="nav-item mobile-only" onclick="toggleMenu(false);exportarBackup()">⬇&nbsp; Backup</div>
+  <div class="nav-item mobile-only" onclick="toggleMenu(false);document.getElementById('import-file').click()">⬆&nbsp; Restaurar</div>
+  <div class="nav-item mobile-only" onclick="doLogout()">Cerrar sesión</div>
 </div>
 
+<div class="menu-backdrop" id="menu-backdrop" onclick="toggleMenu(false)"></div>
 <!-- MAIN -->
 <div class="main">
 
@@ -839,7 +872,13 @@ document.addEventListener('keydown', function(e){
 });
 
 // ══ NAV ══
+function toggleMenu(force){
+  const sb=document.querySelector('.sidebar'), bd=document.getElementById('menu-backdrop'), bt=document.getElementById('menu-btn');
+  const open=typeof force==='boolean'?force:!sb.classList.contains('open');
+  sb.classList.toggle('open',open); bd.classList.toggle('open',open); bt.setAttribute('aria-expanded',open);
+}
 function goTo(page, el){
+  if(window.innerWidth<=768&&document.querySelector('.sidebar.open'))toggleMenu(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+page);
