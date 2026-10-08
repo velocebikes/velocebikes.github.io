@@ -1515,6 +1515,12 @@ function verContrato(id){
   }
 
   document.getElementById('contrato-preview').innerHTML=html;
+  // Nombre del PDF al guardar: CONTRATO COMPRA JAVIER CARMONA 1234KKK
+  const TIPO_PDF={deposito:'GESTIÓN DE VENTA',compra:'COMPRA',reserva:'RESERVA',venta:'VENTA'};
+  const ap1=(k.apellidos||'').trim().split(/\s+/)[0]||'';
+  const nombrePDF=BL?`CONTRATO ${TIPO_PDF[k.tipo]} EN BLANCO`:['CONTRATO',TIPO_PDF[k.tipo],(k.nombre||'').trim(),ap1,(k.matricula||'').replace(/\s/g,'')].filter(Boolean).join(' ');
+  if(!window._tituloCRM)window._tituloCRM=document.title;
+  document.title=nombrePDF.toUpperCase().replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
   document.getElementById('contrato-preview').style.display='block';
   document.getElementById('contrato-print-actions').style.display='flex';
   document.getElementById('contratos-list-wrap').style.display='none';
@@ -1524,9 +1530,6 @@ function verContrato(id){
 function plantillaBlanco(tipo){
   if(!tipo)return;
   const L='______________________';
-  const nombres={deposito:'Gestion de venta',compra:'Compra',reserva:'Reserva',venta:'Venta'};
-  if(!window._tituloCRM)window._tituloCRM=document.title;
-  document.title=`Contrato ${nombres[tipo]} en blanco - Veloce`;
   verContrato({_blanco:true,tipo,nombre:L+'______________',apellidos:'',dni:'________________',dir:L+L,modelo:L,matricula:'_______________',año:'________',plazo:'_____',pendiente:'________________ €',iban:L+'____________',garantiaTipo:'propia',condiciones:''});
 }
 
