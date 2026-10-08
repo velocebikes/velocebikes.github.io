@@ -588,6 +588,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
         <div class="form-group"><label>Cilindrada (cc)</label><input class="f-input" id="v-cc" type="number" placeholder="1254"/></div>
         <div class="form-group"><label>Kilometraje</label><input class="f-input" id="v-km" type="number" placeholder="11500"/></div>
         <div class="form-group"><label>Garantía</label><select class="f-input" id="v-garantia"><option value="Sí">Sí</option><option value="No">No</option></select></div>
+        <div class="form-group"><label>Nº de llaves</label><select class="f-input" id="v-llaves"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
         <div class="form-group"><label>Precio anuncio (€)</label><input class="f-input" id="v-precio" type="number" placeholder="21990"/></div>
         <div class="form-group full"><label>Extras / Equipamiento</label><textarea class="f-input" id="v-extras" placeholder="Maletas, control de tracción, quickshifter, escape Akrapovic…"></textarea></div>
         <div class="form-group full">
@@ -713,6 +714,27 @@ textarea.f-input{resize:vertical;min-height:80px;}
         <div class="form-group full">
           <label>Fecha del contrato <span style="font-size:0.6rem;color:var(--muted)">(editable)</span></label>
           <input class="f-input" id="k-fecha" type="date" style="border-color:var(--border-warm);"/>
+        </div>
+        <div class="form-group" id="k-group-fentrega" style="display:none;">
+          <label>Fecha de entrega del vehículo</label>
+          <input class="f-input" id="k-fentrega" type="date"/>
+          <span style="font-size:0.68rem;color:var(--muted2)">Si la dejas vacía, se usa la fecha del contrato.</span>
+        </div>
+        <div class="form-group" id="k-group-iban" style="display:none;">
+          <label>IBAN del vendedor (para el pago)</label>
+          <input class="f-input" id="k-iban" placeholder="ES00 0000 0000 0000 0000 0000"/>
+        </div>
+        <!-- PARTE DE PAGO (solo venta) -->
+        <div class="form-group full" id="k-group-pp" style="display:none;border-top:0.5px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+          <label style="display:flex;align-items:center;gap:0.6rem;text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--text);cursor:pointer;"><input type="checkbox" id="k-pp" onchange="ppChanged()" style="accent-color:var(--gold);width:16px;height:16px;"/>El cliente entrega un vehículo como parte de pago</label>
+          <div id="k-pp-campos" class="form-grid" style="display:none;margin-top:0.8rem;">
+            <div class="form-group"><label>Marca y modelo</label><input class="f-input" id="k-pp-modelo" placeholder="Volkswagen Golf R"/></div>
+            <div class="form-group"><label>Matrícula</label><input class="f-input" id="k-pp-mat" placeholder="0000XXX"/></div>
+            <div class="form-group"><label>Bastidor (opcional)</label><input class="f-input" id="k-pp-bastidor"/></div>
+            <div class="form-group"><label>Km</label><input class="f-input" id="k-pp-km" type="number"/></div>
+            <div class="form-group full"><label>Valor de tasación (€)</label><input class="f-input" id="k-pp-valor" type="number" oninput="ppChanged()"/>
+              <span id="k-pp-resto" style="font-size:0.72rem;color:var(--gold)"></span></div>
+          </div>
         </div>
         <!-- GARANTÍA (solo venta) -->
         <div class="form-group full" id="k-group-garantia" style="display:none;">
@@ -945,6 +967,7 @@ function openModalVehiculo(id=null){
   document.getElementById('v-id').value='';
   ['v-bastidor','v-matricula','v-marca','v-modelo','v-año','v-cv','v-cc','v-km','v-extras','v-precio'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('v-garantia').value='Sí';
+  document.getElementById('v-llaves').value='';
   document.getElementById('upload-progress').textContent='';
   document.getElementById('fotos-grid').innerHTML='';
   document.getElementById('modal-v-title').innerHTML='Nuevo <em style="font-style:italic;color:var(--gold)">vehículo</em>';
@@ -966,6 +989,7 @@ function openModalVehiculo(id=null){
       document.getElementById('v-extras').value=v.extras||'';
       document.getElementById('v-precio').value=v.precio||'';
       document.getElementById('v-garantia').value=v.garantia||'Sí';
+      document.getElementById('v-llaves').value=v.llaves||'';
       fotosTemp=[...(v.fotos||[])];
       setEstado(v.estado||'Visible');
       renderFotosTemp();
@@ -989,6 +1013,7 @@ function saveVehiculo(){
     cc:document.getElementById('v-cc').value,
     km:document.getElementById('v-km').value,
     garantia:document.getElementById('v-garantia').value,
+    llaves:document.getElementById('v-llaves').value,
     extras:document.getElementById('v-extras').value.trim(),
     estado:estadoActual,
     precio:document.getElementById('v-precio').value,
@@ -1155,6 +1180,7 @@ function selectCliente(id){
   document.getElementById('k-apellidos').value=c.apellidos;
   document.getElementById('k-dir').value=`${c.direccion}, ${c.cp} ${c.ciudad}`;
   document.getElementById('k-dni').dataset.dni=c.dni;
+  if(c.iban)document.getElementById('k-iban').value=c.iban;
   document.getElementById('k-clientes-dropdown').style.display='none';
 }
 
@@ -1203,11 +1229,21 @@ function tipoContratoChanged(){
   document.getElementById('k-group-señal').style.display=tipo==='reserva'?'block':'none';
   document.getElementById('k-group-pendiente').style.display=tipo==='reserva'?'block':'none';
   document.getElementById('k-group-garantia').style.display=tipo==='venta'?'block':'none';
+  document.getElementById('k-group-fentrega').style.display=tipo==='compra'||tipo==='venta'?'block':'none';
+  document.getElementById('k-group-iban').style.display=tipo==='compra'?'block':'none';
+  document.getElementById('k-group-pp').style.display=tipo==='venta'?'block':'none';
   document.getElementById('k-group-plazo').style.display=tipo==='compra'||tipo==='venta'?'none':'block';
   // Plazo por defecto 7 días en reserva
   if(tipo==='reserva') document.getElementById('k-plazo').value='7';
   // Precio editable siempre
   document.getElementById('k-precio').readOnly=false;
+}
+
+function ppChanged(){
+  const on=document.getElementById('k-pp').checked;
+  document.getElementById('k-pp-campos').style.display=on?'grid':'none';
+  const precio=Number(document.getElementById('k-precio').value)||0, val=Number(document.getElementById('k-pp-valor').value)||0;
+  document.getElementById('k-pp-resto').textContent=on&&val?`Resto a pagar por el cliente: ${(precio-val).toLocaleString('es-ES',{useGrouping:'always'})} €`:'';
 }
 
 function calcularPendiente(){
@@ -1218,7 +1254,9 @@ function calcularPendiente(){
 }
 
 function openModalContrato(){
-  ['k-dni','k-nombre','k-apellidos','k-dir','k-mat','k-modelo','k-matricula','k-año','k-km','k-precio','k-plazo','k-señal','k-pendiente','k-condiciones'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['k-dni','k-nombre','k-apellidos','k-dir','k-mat','k-modelo','k-matricula','k-año','k-km','k-precio','k-plazo','k-señal','k-pendiente','k-condiciones','k-fentrega','k-iban','k-pp-modelo','k-pp-mat','k-pp-bastidor','k-pp-km','k-pp-valor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('k-pp').checked=false;ppChanged();
+  delete document.getElementById('k-tipo').dataset.editId;
   document.getElementById('k-fecha').value=new Date().toISOString().split('T')[0];
   document.getElementById('k-tipo').value='deposito';
   document.getElementById('k-clientes-dropdown').style.display='none';
@@ -1249,7 +1287,11 @@ function saveContrato(){
     pendiente:document.getElementById('k-pendiente').value,
     garantiaTipo:document.getElementById('k-garantia-tipo').value,
     condiciones:document.getElementById('k-condiciones').value.trim(),
+    fentrega:document.getElementById('k-fentrega').value,
+    iban:document.getElementById('k-iban').value.trim().toUpperCase(),
+    pp:document.getElementById('k-pp').checked&&document.getElementById('k-tipo').value==='venta'?{modelo:document.getElementById('k-pp-modelo').value.trim(),matricula:document.getElementById('k-pp-mat').value.trim().toUpperCase(),bastidor:document.getElementById('k-pp-bastidor').value.trim(),km:document.getElementById('k-pp-km').value,valor:document.getElementById('k-pp-valor').value}:null,
   };
+  if(k.pp&&!(Number(k.pp.valor)>0)){alert('Indica el valor de tasación del vehículo entregado como parte de pago.');return;}
   if(!k.nombre||!k.modelo){alert('Completa cliente y vehículo.');return;}
   if(editId){
     const idx=contratos.findIndex(x=>x.id===Number(editId));
@@ -1304,6 +1346,10 @@ function editContrato(id){
   document.getElementById('k-fecha').value=k.fecha||'';
   document.getElementById('k-condiciones').value=k.condiciones||'';
   if(k.garantiaTipo) document.getElementById('k-garantia-tipo').value=k.garantiaTipo;
+  document.getElementById('k-fentrega').value=k.fentrega||'';
+  document.getElementById('k-iban').value=k.iban||'';
+  if(k.pp){document.getElementById('k-pp').checked=true;document.getElementById('k-pp-modelo').value=k.pp.modelo||'';document.getElementById('k-pp-mat').value=k.pp.matricula||'';document.getElementById('k-pp-bastidor').value=k.pp.bastidor||'';document.getElementById('k-pp-km').value=k.pp.km||'';document.getElementById('k-pp-valor').value=k.pp.valor||'';}
+  ppChanged();
   // Guardar id para sobreescribir al guardar
   document.getElementById('k-tipo').dataset.editId=k.id;
 }
@@ -1327,6 +1373,7 @@ function verContrato(id){
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Kilometraje</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${km}</td></tr>
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Año</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${k.año||'—'}</td></tr>
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Precio</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;font-weight:700;">${precio}</td></tr>
+    ${(()=>{const vv=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;return vv&&vv.llaves?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${vv.llaves}</td></tr>`:'';})()}
   </table>`;
 
   const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;">
@@ -1339,6 +1386,19 @@ function verContrato(id){
   let html='';
 
   // ── 1. DEPÓSITO ──
+  // ── Utilidades comunes a compra, reserva y venta ──
+  const ORD=['Primera','Segunda','Tercera','Cuarta','Quinta','Sexta','Séptima','Octava','Novena','Décima','Undécima','Duodécima','Decimotercera','Decimocuarta'];
+  const clausulas=lista=>{let n=0;return lista.filter(Boolean).map(c=>typeof c==='string'?c:`<p><strong>${ORD[n++]}. ${c[0]}</strong><br>${c[1]}</p>`).join('\n    ');};
+  const vehK=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;
+  const llaves=vehK&&vehK.llaves?Number(vehK.llaves):0;
+  const llavesTxt=llaves?`, junto con ${llaves===1?'una (1) llave':llaves===2?'dos (2) llaves':'tres (3) llaves'}`:'';
+  const fEnt=k.fentrega||k.fecha;
+  const fEntTxt=fEnt?(()=>{const d=new Date(fEnt+'T12:00:00');return `${d.getDate()} de ${M[d.getMonth()]} de ${d.getFullYear()}`;})():'___________';
+  const eurTxt=n=>Number(n||0).toLocaleString('es-ES',{useGrouping:'always'})+' €';
+  const RGPD=['Protección de datos.','Los datos personales facilitados serán tratados por VELOCE CARS BOUTIQUE S.L., como responsable, con la finalidad de gestionar el presente contrato y cumplir las obligaciones legales derivadas del mismo (fiscales, de tráfico y de registro de operaciones de vehículos). La base legal es la ejecución del contrato y el cumplimiento de obligaciones legales. Los datos se conservarán durante los plazos legalmente exigidos y solo se comunicarán a terceros cuando sea necesario para la gestión de la operación (Dirección General de Tráfico, gestorías, entidades financieras) o exista obligación legal. El interesado puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad dirigiéndose por escrito a VELOCE CARS en Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón (Madrid), o al correo velocebikes11@gmail.com, y presentar una reclamación ante la Agencia Española de Protección de Datos (www.aepd.es).'];
+  const LEG=['Legislación.','Este contrato se rige por la legislación española vigente.'];
+
+
   if(k.tipo==='deposito'){
     html=`<h2>CONTRATO DE GESTIÓN DE VENTA Y DEPÓSITO DE MOTOCICLETA</h2>
     <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
@@ -1360,8 +1420,10 @@ function verContrato(id){
     <p><strong>Séptima. Aceptación de ofertas.</strong><br>Cualquier oferta por importe inferior al precio pactado requerirá aceptación expresa de LA PARTE PROPIETARIA antes de formalizarse.</p>
     <p><strong>Octava. Entrega al comprador.</strong><br>El vehículo no será entregado hasta que el precio total haya sido abonado íntegramente.</p>
     <p><strong>Novena. Duración.</strong><br>El contrato tendrá vigencia desde la firma hasta el día ${plazoFin||'___________'}, prorrogable por mutuo acuerdo.</p>
-    <p><strong>Décima. Retirada.</strong><br>LA PARTE PROPIETARIA podrá retirar el vehículo previa comunicación, siempre que no exista operación en curso o reserva formalizada.</p>
-    <p><strong>Undécima. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    <p><strong>Décima. Exclusividad.</strong><br>Durante la vigencia del presente contrato, LA PARTE PROPIETARIA encarga la venta del vehículo a VELOCE CARS en exclusiva y se compromete a no venderlo, cederlo ni entregarlo, ni directamente ni a través de otro concesionario, compraventa, taller, intermediario o tercero.<br>Este compromiso es efectivo desde la firma del presente contrato, con independencia de que el vehículo se encuentre ya en las instalaciones de VELOCE CARS o permanezca temporalmente en poder de LA PARTE PROPIETARIA o en un taller u otro lugar para su revisión, preentrega, reparación, ITV o cualquier otro motivo. Mientras el vehículo no esté en las instalaciones de VELOCE CARS, LA PARTE PROPIETARIA deberá informar a VELOCE CARS de dónde se encuentra y no podrá ofrecerlo ni venderlo a quien realice dichos trabajos ni a ningún otro tercero.</p>
+    <p><strong>Undécima. Desistimiento y penalización.</strong><br>Si, una vez firmado el presente contrato, LA PARTE PROPIETARIA decidiera cancelar la gestión de venta, no entregar el vehículo a VELOCE CARS, retirarlo antes de la fecha de vencimiento o incumplir el compromiso de exclusividad de la cláusula anterior, deberá abonar a VELOCE CARS, en concepto de cláusula penal por el trabajo y los gastos ya realizados (preparación, fotografías, publicación de anuncios, atención a interesados y gestión documental), la cantidad de <strong>MIL QUINIENTOS EUROS (1.500 €) más el IVA correspondiente</strong>.<br>Esta penalización será exigible aunque el vehículo no haya llegado a entrar en las instalaciones de VELOCE CARS. Dicho importe deberá abonarse antes de la retirada del vehículo si se encuentra en las instalaciones de VELOCE CARS o, en cualquier otro caso, en el plazo de diez (10) días desde que VELOCE CARS lo requiera por escrito.<br>No procederá esta penalización si la retirada se produce una vez vencido el plazo del contrato sin que se haya vendido el vehículo, por mutuo acuerdo por escrito de ambas partes o por incumplimiento de VELOCE CARS.</p>
+    <p><strong>Duodécima. ${RGPD[0]}</strong><br>${RGPD[1]}</p>
+    <p><strong>Decimotercera. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
     ${condBlock}
     <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
     ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`LA PARTE PROPIETARIA<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
@@ -1375,14 +1437,17 @@ function verContrato(id){
     <p><strong>PARTE COMPRADORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
     <p><strong>PARTE VENDEDORA</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL VENDEDOR</strong>.</p>
     <h3>CLÁUSULAS</h3>
-    <p><strong>Primera. Objeto.</strong><br>EL VENDEDOR transmite a VELOCE CARS la plena propiedad del vehículo descrito a continuación, libre de cargas y gravámenes.</p>
-    ${tablaVehiculo}
-    <p><strong>Segunda. Precio y pago.</strong><br>El precio acordado es de <strong>${precio}</strong>, que VELOCE CARS abona en su totalidad en el acto de firma del presente contrato.</p>
-    <p><strong>Tercera. Estado del vehículo.</strong><br>EL VENDEDOR declara que el vehículo se encuentra en el estado descrito, con la documentación en regla, al corriente del seguro obligatorio y libre de cualquier carga, embargo o reserva de dominio.</p>
-    <p><strong>Cuarta. Transmisión de propiedad.</strong><br>La propiedad se transmite a VELOCE CARS en el momento del pago. EL VENDEDOR se compromete a facilitar todos los documentos necesarios para la transferencia.</p>
-    <p><strong>Quinta. Documentación.</strong><br>EL VENDEDOR entrega en el acto: permiso de circulación, ficha técnica, documentación acreditativa de la titularidad y, en su caso, justificante del último ITV favorable.</p>
-    <p><strong>Sexta. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
-    <p><strong>Séptima. Estado del vehículo y vicios ocultos.</strong><br>La parte compradora declara conocer el estado general del vehículo y aceptarlo en las condiciones en que se encuentra, sin perjuicio de que la parte vendedora responderá frente a la parte compradora por los vicios ocultos existentes con anterioridad a la venta, conforme a la normativa aplicable.</p>
+    ${clausulas([
+      ['Objeto.','EL VENDEDOR transmite a VELOCE CARS la plena propiedad del vehículo descrito a continuación, libre de cargas y gravámenes.'],
+      tablaVehiculo,
+      ['Precio y pago.',`El precio acordado es de <strong>${precio}</strong>, que VELOCE CARS abona en su totalidad ${k.iban?`mediante transferencia bancaria a la cuenta <strong>${k.iban}</strong>, de la que EL VENDEDOR declara ser titular`:'en el acto de firma del presente contrato'}.`],
+      ['Estado del vehículo.','EL VENDEDOR declara que el vehículo se encuentra en el estado descrito, con la documentación en regla, al corriente del seguro obligatorio y libre de cualquier carga, embargo o reserva de dominio.'],
+      ['Declaraciones del vendedor.','EL VENDEDOR declara bajo su responsabilidad que: (a) el kilometraje indicado es real y no ha sido manipulado; (b) el vehículo no ha sufrido siniestro grave, inundación, incendio ni reconstrucción, ni ha sido declarado siniestro total; (c) no existen sobre el vehículo cargas, embargos, reservas de dominio, multas, sanciones ni impuestos pendientes; y (d) es su legítimo propietario y puede disponer libremente de él.<br>Si cualquiera de estas declaraciones resultase falsa, o apareciesen cargas, multas, sanciones, impuestos o deudas anteriores a la entrega del vehículo, EL VENDEDOR responderá íntegramente de ellos, y VELOCE CARS podrá exigir su pago o resolver el contrato con devolución del precio abonado y de los gastos ocasionados.'],
+      ['Entrega del vehículo.',`El vehículo se entrega a VELOCE CARS el día ${fEntTxt}${llavesTxt}. Las multas, sanciones, peajes, impuestos y cualquier otra responsabilidad derivados de la circulación o tenencia del vehículo anteriores a su entrega corresponden a EL VENDEDOR.`],
+      ['Transmisión de propiedad.','La propiedad se transmite a VELOCE CARS en el momento del pago. EL VENDEDOR se compromete a facilitar todos los documentos necesarios para la transferencia.'],
+      ['Documentación.','EL VENDEDOR entrega en el acto: permiso de circulación, ficha técnica, documentación acreditativa de la titularidad y, en su caso, justificante de la última ITV favorable.'],
+      ['Vicios ocultos.','EL VENDEDOR responderá frente a VELOCE CARS de los vicios ocultos existentes con anterioridad a la venta, conforme a la normativa aplicable.'],
+      RGPD, LEG])}
     ${condBlock}
     <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
     ${firmas('VELOCE CARS BOUTIQUE S.L. (Comprador)<br>Nombre: VELOCE CARS BOUTIQUE S.L.',`EL VENDEDOR<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
@@ -1396,13 +1461,16 @@ function verContrato(id){
     <p><strong>PARTE VENDEDORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
     <p><strong>PARTE COMPRADORA / RESERVANTE</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL COMPRADOR</strong>.</p>
     <h3>CLÁUSULAS</h3>
-    <p><strong>Primera. Objeto.</strong><br>EL COMPRADOR reserva el vehículo descrito a continuación, comprometiéndose a adquirirlo en las condiciones pactadas.</p>
-    ${tablaVehiculo}
-    <p><strong>Segunda. Señal de reserva.</strong><br>EL COMPRADOR entrega en el acto una señal de <strong>${señal}</strong> en concepto de reserva. Dicho importe se descontará íntegramente del precio final (${precio}) en el momento de la compraventa, quedando un importe pendiente de <strong>${k.pendiente||'—'}</strong>.</p>
-    <p><strong>Tercera. Efectos de la señal.</strong><br>La señal entregada tiene carácter confirmatorio de la reserva y se descontará del precio final en el momento de formalizar la compraventa.</p>
-    <p><strong>Cuarta. Plazo de formalización.</strong><br>La compraventa definitiva deberá formalizarse en un plazo máximo de <strong>7 días naturales</strong>${plazoFin?' (hasta el '+plazoFin+')':''} desde la firma de este documento.</p>
-    <p><strong>Quinta. Retirada del vehículo.</strong><br>Durante el período de reserva, VELOCE CARS retirará el vehículo de la venta y no aceptará otras ofertas sobre el mismo.</p>
-    <p><strong>Sexta. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${clausulas([
+      ['Objeto.','EL COMPRADOR reserva el vehículo descrito a continuación, comprometiéndose a adquirirlo en las condiciones pactadas.'],
+      tablaVehiculo,
+      ['Señal de reserva.',`EL COMPRADOR entrega en el acto una señal de <strong>${señal}</strong> en concepto de reserva. Dicho importe se descontará íntegramente del precio final (${precio}) en el momento de la compraventa, quedando un importe pendiente de <strong>${k.pendiente||'—'}</strong>.`],
+      ['Efectos de la señal.','La señal entregada tiene carácter confirmatorio de la reserva, forma parte del precio y se descontará del mismo en el momento de formalizar la compraventa.'],
+      ['Plazo de formalización.',`La compraventa definitiva deberá formalizarse en un plazo máximo de <strong>${k.plazo||7} días naturales</strong>${plazoFin?' (hasta el '+plazoFin+')':''} desde la firma de este documento.`],
+      ['Retirada del vehículo.','Durante el período de reserva, VELOCE CARS retirará el vehículo de la venta y no aceptará otras ofertas sobre el mismo.'],
+      ['Incumplimiento del comprador.','Si EL COMPRADOR desistiera de la compra o no la formalizara en el plazo indicado por causas no imputables a VELOCE CARS, perderá la señal entregada, que VELOCE CARS retendrá en concepto de indemnización por haber retirado el vehículo de la venta durante el período de reserva. En ese caso la reserva quedará sin efecto y VELOCE CARS podrá disponer libremente del vehículo. Si fuera VELOCE CARS quien no formalizase la venta por causas imputables a ella, devolverá íntegramente la señal a EL COMPRADOR.'],
+      ['Financiación.','Si la compra estuviera condicionada a la obtención de financiación y así constase en las condiciones particulares de este contrato, y la entidad financiera la denegase, VELOCE CARS devolverá íntegramente la señal, siempre que EL COMPRADOR acredite documentalmente dicha denegación dentro del plazo de reserva.'],
+      RGPD, LEG])}
     ${condBlock}
     <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
     ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`EL COMPRADOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
@@ -1410,23 +1478,29 @@ function verContrato(id){
 
   // ── 4. VENTA ──
   else if(k.tipo==='venta'){
-    const garantiaTexto = k.garantiaTipo==='oficial'
-      ? 'El vehículo dispone de garantía oficial de fábrica vigente, cuyos términos y condiciones son los establecidos por el fabricante.'
-      : 'VELOCE CARS otorga al COMPRADOR una garantía de un (1) año sobre el vehículo, cubriendo los defectos de funcionamiento no derivados del uso ordinario ni de modificaciones realizadas por el COMPRADOR.';
+    const garantiaTexto = 'VELOCE CARS otorga al COMPRADOR una garantía de un (1) año sobre el vehículo, cubriendo los defectos de funcionamiento no derivados del uso ordinario ni de modificaciones realizadas por el COMPRADOR.'
+      + (k.garantiaTipo==='oficial' ? ' Adicionalmente, el vehículo dispone de garantía oficial de fábrica vigente, cuyos términos y condiciones son los establecidos por el fabricante.' : '');
+    const pp=k.pp&&k.pp.valor?k.pp:null;
+    const resto=pp?Number(k.precio||0)-Number(pp.valor||0):0;
     html=`<h2>CONTRATO DE COMPRAVENTA DE VEHÍCULO</h2>
     <p class="c-subtitle">En Madrid, a ${dia} de ${mes} de ${año}.</p>
     <h3>REUNIDOS</h3>
     <p><strong>PARTE VENDEDORA</strong><br>VELOCE CARS BOUTIQUE S.L., con CIF B55499149, Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón, Madrid, en adelante <strong>VELOCE CARS</strong>.</p>
     <p><strong>PARTE COMPRADORA</strong><br>D./Dña. ${k.nombre} ${k.apellidos}, con DNI/NIE ${k.dni}, domiciliado/a en ${k.dir}, en adelante <strong>EL COMPRADOR</strong>.</p>
     <h3>CLÁUSULAS</h3>
-    <p><strong>Primera. Objeto.</strong><br>VELOCE CARS vende y transmite a EL COMPRADOR la plena propiedad del vehículo descrito a continuación.</p>
-    ${tablaVehiculo}
-    <p><strong>Segunda. Precio y pago.</strong><br>El precio de venta acordado es de <strong>${precio}</strong>, abonado en su totalidad por EL COMPRADOR en el momento de la firma del presente contrato.</p>
-    <p><strong>Tercera. Estado del vehículo.</strong><br>EL COMPRADOR declara conocer el estado del vehículo, habiéndolo examinado a su satisfacción antes de la firma. VELOCE CARS garantiza que el vehículo se entrega libre de cargas y gravámenes.</p>
-    <p><strong>Cuarta. Transmisión de propiedad.</strong><br>La propiedad se transmite a EL COMPRADOR en el momento del pago íntegro del precio acordado.</p>
-    <p><strong>Quinta. Documentación.</strong><br>VELOCE CARS entrega al COMPRADOR toda la documentación del vehículo necesaria para formalizar la transferencia.</p>
-    <p><strong>Sexta. Garantía.</strong><br>${garantiaTexto}</p>
-    <p><strong>Séptima. Legislación.</strong><br>Este contrato se rige por la legislación española vigente.</p>
+    ${clausulas([
+      ['Objeto.','VELOCE CARS vende y transmite a EL COMPRADOR la plena propiedad del vehículo descrito a continuación.'],
+      tablaVehiculo,
+      ['Precio y pago.',pp
+        ?`El precio de venta acordado es de <strong>${precio}</strong>, que EL COMPRADOR abona de la siguiente forma: <strong>${eurTxt(pp.valor)}</strong> mediante la entrega del vehículo descrito en la cláusula siguiente, y el resto, <strong>${eurTxt(resto)}</strong>, en el momento de la firma del presente contrato.`
+        :`El precio de venta acordado es de <strong>${precio}</strong>, abonado en su totalidad por EL COMPRADOR en el momento de la firma del presente contrato.`],
+      pp?['Vehículo entregado como parte de pago.',`EL COMPRADOR transmite a VELOCE CARS la plena propiedad del vehículo <strong>${pp.modelo||'—'}</strong>, matrícula <strong>${pp.matricula||'—'}</strong>${pp.bastidor?`, número de bastidor ${pp.bastidor}`:''}${pp.km?`, con ${Number(pp.km).toLocaleString('es-ES')} km`:''}, que las partes valoran de mutuo acuerdo en <strong>${eurTxt(pp.valor)}</strong>, importe que se descuenta del precio de venta.<br>EL COMPRADOR declara que dicho vehículo es de su propiedad, que su kilometraje es real y no ha sido manipulado, que no ha sufrido siniestro grave, inundación ni reconstrucción, y que está libre de cargas, embargos, reservas de dominio, multas, sanciones e impuestos pendientes. EL COMPRADOR responderá íntegramente de cualquier carga, multa, sanción, impuesto o deuda anterior a su entrega, así como de los vicios ocultos existentes en el mismo, y entrega con él la documentación necesaria para su transferencia a nombre de VELOCE CARS.`]:null,
+      ['Estado del vehículo.','EL COMPRADOR declara conocer el estado del vehículo, habiéndolo examinado a su satisfacción antes de la firma. VELOCE CARS garantiza que el vehículo se entrega libre de cargas y gravámenes.'],
+      ['Entrega del vehículo.',`El vehículo se entrega a EL COMPRADOR el día ${fEntTxt}${llavesTxt}. Desde la entrega, las multas, sanciones, peajes y cualquier otra responsabilidad derivados de la circulación del vehículo corresponden a EL COMPRADOR.`],
+      ['Transmisión de propiedad.','La propiedad se transmite a EL COMPRADOR en el momento del pago íntegro del precio acordado.'],
+      ['Documentación.','VELOCE CARS entrega al COMPRADOR toda la documentación del vehículo necesaria para formalizar la transferencia.'],
+      ['Garantía.',garantiaTexto],
+      RGPD, LEG])}
     ${condBlock}
     <p>En prueba de conformidad, ambas partes firman el presente contrato por duplicado.</p>
     ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`EL COMPRADOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
@@ -2408,7 +2482,7 @@ function openExp(id){
   document.getElementById('exp-id').value=v.id;
   document.getElementById('exp-title').innerHTML=`Expediente <em style="font-style:italic;color:var(--gold)">${eH(v.marca==='Otra'?'':v.marca)} ${eH(v.modelo)}</em>`;
   const V=(k,val)=>document.getElementById(k).value=val??'';
-  V('exp-entrada',e.entrada||fechaEntrada(v)); V('exp-itv',e.itv); V('exp-km',e.km); V('exp-llaves',e.llaves); V('exp-efectivo',e.efectivo); V('exp-ftransf',e.ftransf); V('exp-notas',e.notas);
+  V('exp-entrada',e.entrada||fechaEntrada(v)); V('exp-itv',e.itv); V('exp-km',e.km); V('exp-llaves',e.llaves||v.llaves); V('exp-efectivo',e.efectivo); V('exp-ftransf',e.ftransf); V('exp-notas',e.notas);
   const ck=(list,el)=>document.getElementById(el).innerHTML=list.map(([k,t])=>`<label class="chk"><input type="checkbox" data-doc="${k}" ${e[k]?'checked':''}/>${t}</label>`).join('');
   ck(DOCS_ENTRADA,'exp-entrada-list'); ck(DOCS_SALIDA,'exp-salida-list');
   openModal('modal-exp'); if(window.renderDocs)renderDocs(v.id);
