@@ -2002,12 +2002,7 @@ function facturaHTML(k, opts){
     <div style="font-weight:bold;margin-top:10px;">OBSERVACIONES</div>
     ${obsLines.map(l=>`<div>${l}</div>`).join('')}
 
-    <table style="width:100%;border-collapse:collapse;margin-top:40px;">
-      ${row('Firma del vendedor', 'Firma del comprador')}
-      ${row('_________________________', '_________________________')}
-    </table>
-
-    <div style="margin-top:16px;">IBAN: ES22 0081 5338 3600 0170 6873</div>
+    <div style="margin-top:24px;">IBAN: ES22 0081 5338 3600 0170 6873</div>
   </div>`;
 }
 
