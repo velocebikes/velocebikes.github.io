@@ -392,6 +392,13 @@ textarea.f-input{resize:vertical;min-height:80px;}
     <div class="page-header" id="contratos-header">
       <div><div class="page-eyebrow">Documentación</div><h1 class="page-title">Contra<em>tos</em></h1></div>
       <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <select class="btn-outline btn-sm" style="cursor:pointer;background:transparent;" onchange="plantillaBlanco(this.value);this.value=''" aria-label="Plantilla en blanco">
+          <option value="">Plantilla en blanco ▾</option>
+          <option value="deposito">Gestión de venta y depósito</option>
+          <option value="compra">Compra</option>
+          <option value="reserva">Reserva</option>
+          <option value="venta">Venta</option>
+        </select>
         <button class="btn-outline btn-sm" onclick="libroRegistro()">Libro registro</button>
         <button class="btn-outline btn-sm" onclick="libroCSV()">Libro en CSV</button>
         <button class="btn-primary" onclick="openModalContrato()">+ Nuevo contrato</button>
@@ -1357,15 +1364,16 @@ function editContrato(id){
 function deleteContrato(id){if(!confirm('¿Eliminar?'))return;save('contratos',load('contratos').filter(k=>k.id!==id));renderContratos();updateStats();}
 
 function verContrato(id){
-  const k=load('contratos').find(k=>k.id===id);if(!k)return;
+  const k=typeof id==='object'?id:load('contratos').find(k=>k.id===id);if(!k)return;
+  const BL=!!k._blanco, L='________________';
   const fd=new Date(k.fecha);
   const M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const dia=fd.getDate(), mes=M[fd.getMonth()], año=fd.getFullYear();
-  let plazoFin='';
-  if(k.plazo){const pf=new Date(fd);pf.setDate(pf.getDate()+Number(k.plazo));plazoFin=`${pf.getDate()} de ${M[pf.getMonth()]} de ${pf.getFullYear()}`;}
-  const km=k.km?Number(k.km).toLocaleString('es-ES')+' km':'—';
-  const precio=k.precio?Number(k.precio).toLocaleString('es-ES')+' €':'—';
-  const señal=k.señal?Number(k.señal).toLocaleString('es-ES')+' €':'—';
+  const dia=BL?'_____':fd.getDate(), mes=BL?'_______________':M[fd.getMonth()], año=BL?'________':fd.getFullYear();
+  let plazoFin=BL?'_______________':'';
+  if(!BL&&k.plazo){const pf=new Date(fd);pf.setDate(pf.getDate()+Number(k.plazo));plazoFin=`${pf.getDate()} de ${M[pf.getMonth()]} de ${pf.getFullYear()}`;}
+  const km=BL?L:k.km?Number(k.km).toLocaleString('es-ES')+' km':'—';
+  const precio=BL?L+' €':k.precio?Number(k.precio).toLocaleString('es-ES')+' €':'—';
+  const señal=BL?L+' €':k.señal?Number(k.señal).toLocaleString('es-ES')+' €':'—';
 
   const tablaVehiculo=`<table style="width:100%;border-collapse:collapse;margin:1rem 0 1.5rem;font-size:10.5pt;border:2px solid #111;">
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;width:45%;font-weight:700;color:#111;">Marca y modelo</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;font-weight:600;">${k.modelo}</td></tr>
@@ -1373,7 +1381,7 @@ function verContrato(id){
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Kilometraje</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${km}</td></tr>
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Año</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${k.año||'—'}</td></tr>
     <tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Precio</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;font-weight:700;">${precio}</td></tr>
-    ${(()=>{const vv=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;return vv&&vv.llaves?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${vv.llaves}</td></tr>`:'';})()}
+    ${(()=>{const vv=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;return BL?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${L}</td></tr>`:vv&&vv.llaves?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${vv.llaves}</td></tr>`:'';})()}
   </table>`;
 
   const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;">
@@ -1381,7 +1389,7 @@ function verContrato(id){
     <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:6rem;padding-top:0.5rem;font-size:10pt;">${b}</div></div>
   </div>`;
 
-  const condBlock=k.condiciones?`<h3>CONDICIONES PARTICULARES</h3><p>De forma adicional, las partes acuerdan las siguientes condiciones particulares: ${k.condiciones}</p>`:'';
+  const condBlock=BL?`<h3>CONDICIONES PARTICULARES</h3><p>${'_'.repeat(85)}</p><p>${'_'.repeat(85)}</p><p>${'_'.repeat(85)}</p>`:k.condiciones?`<h3>CONDICIONES PARTICULARES</h3><p>De forma adicional, las partes acuerdan las siguientes condiciones particulares: ${k.condiciones}</p>`:'';
 
   let html='';
 
@@ -1391,9 +1399,9 @@ function verContrato(id){
   const clausulas=lista=>{let n=0;return lista.filter(Boolean).map(c=>typeof c==='string'?c:`<p><strong>${ORD[n++]}. ${c[0]}</strong><br>${c[1]}</p>`).join('\n    ');};
   const vehK=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;
   const llaves=vehK&&vehK.llaves?Number(vehK.llaves):0;
-  const llavesTxt=llaves?`, junto con ${llaves===1?'una (1) llave':llaves===2?'dos (2) llaves':'tres (3) llaves'}`:'';
+  const llavesTxt=BL?', junto con _____ llave(s)':llaves?`, junto con ${llaves===1?'una (1) llave':llaves===2?'dos (2) llaves':'tres (3) llaves'}`:'';
   const fEnt=k.fentrega||k.fecha;
-  const fEntTxt=fEnt?(()=>{const d=new Date(fEnt+'T12:00:00');return `${d.getDate()} de ${M[d.getMonth()]} de ${d.getFullYear()}`;})():'___________';
+  const fEntTxt=BL?'_______________':fEnt?(()=>{const d=new Date(fEnt+'T12:00:00');return `${d.getDate()} de ${M[d.getMonth()]} de ${d.getFullYear()}`;})():'___________';
   const eurTxt=n=>Number(n||0).toLocaleString('es-ES',{useGrouping:'always'})+' €';
   const RGPD=['Protección de datos.','Los datos personales facilitados serán tratados por VELOCE CARS BOUTIQUE S.L., como responsable, con la finalidad de gestionar el presente contrato y cumplir las obligaciones legales derivadas del mismo (fiscales, de tráfico y de registro de operaciones de vehículos). La base legal es la ejecución del contrato y el cumplimiento de obligaciones legales. Los datos se conservarán durante los plazos legalmente exigidos y solo se comunicarán a terceros cuando sea necesario para la gestión de la operación (Dirección General de Tráfico, gestorías, entidades financieras) o exista obligación legal. El interesado puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad dirigiéndose por escrito a VELOCE CARS en Avenida de Luis García Cereceda 5, 28223 Pozuelo de Alarcón (Madrid), o al correo velocebikes11@gmail.com, y presentar una reclamación ante la Agencia Española de Protección de Datos (www.aepd.es).'];
   const LEG=['Legislación.','Este contrato se rige por la legislación española vigente.'];
@@ -1513,7 +1521,17 @@ function verContrato(id){
   document.getElementById('contratos-header').style.display='none';
 }
 
+function plantillaBlanco(tipo){
+  if(!tipo)return;
+  const L='______________________';
+  const nombres={deposito:'Gestion de venta',compra:'Compra',reserva:'Reserva',venta:'Venta'};
+  if(!window._tituloCRM)window._tituloCRM=document.title;
+  document.title=`Contrato ${nombres[tipo]} en blanco - Veloce`;
+  verContrato({_blanco:true,tipo,nombre:L+'______________',apellidos:'',dni:'________________',dir:L+L,modelo:L,matricula:'_______________',año:'________',plazo:'_____',pendiente:'________________ €',iban:L+'____________',garantiaTipo:'propia',condiciones:''});
+}
+
 function backToContratos(){
+  if(window._tituloCRM){document.title=window._tituloCRM;window._tituloCRM=null;}
   document.getElementById('contrato-preview').style.display='none';
   document.getElementById('contrato-print-actions').style.display='none';
   document.getElementById('contratos-list-wrap').style.display='block';
