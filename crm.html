@@ -325,6 +325,8 @@ textarea.f-input{resize:vertical;min-height:80px;}
     <span class="topbar-user" id="topbar-user"></span>
     <button class="btn-logout" onclick="exportarBackup()">⬇ Backup</button>
     <button class="btn-logout" onclick="document.getElementById('import-file').click()">⬆ Restaurar</button>
+    <button class="btn-logout" onclick="document.getElementById('merge-file').click()" title="Añade los datos de otro backup sin borrar los tuyos">⇄ Juntar</button>
+    <input type="file" id="merge-file" accept=".json" style="display:none;" onchange="juntarBackup(event)">
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importarBackup(event)">
     <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
   </div>
@@ -360,6 +362,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
   <div class="nav-section mobile-only">Cuenta</div>
   <div class="nav-item mobile-only" onclick="toggleMenu(false);exportarBackup()">⬇&nbsp; Backup</div>
   <div class="nav-item mobile-only" onclick="toggleMenu(false);document.getElementById('import-file').click()">⬆&nbsp; Restaurar</div>
+  <div class="nav-item mobile-only" onclick="toggleMenu(false);document.getElementById('merge-file').click()">⇄&nbsp; Juntar backup</div>
   <div class="nav-item mobile-only" onclick="doLogout()">Cerrar sesión</div>
 </div>
 
@@ -403,6 +406,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
           <button class="btn-outline btn-sm" onclick="filtrarEstado('Reservado')">Reservados</button>
           <button class="btn-outline btn-sm" onclick="filtrarEstado('Vendido')">Vendidos</button>
           <button class="btn-outline btn-sm" onclick="filtrarEstado('Uso empresa')">Uso empresa</button>
+          <button class="btn-outline btn-sm" onclick="filtrarEstado('Oculto')">Ocultos</button>
         </div>
       </div>
       <table id="tb-vehiculos">
@@ -534,8 +538,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
       <h2>Motos vendidas este mes</h2>
       <div class="table-wrap">
         <div class="table-toolbar">
-          <span class="form-hint">El margen cuenta en el mes de la venta. Los gastos de cada moto se descuentan en su neto.</span>
-          <button class="btn-outline btn-sm" onclick="importarVentasContratos()">Importar ventas desde contratos</button>
+          <span class="form-hint">Se rellena solo con los contratos de compra, depósito y venta. Tú solo añades los gastos.</span>
         </div>
         <div class="table-scroll"><table>
           <thead><tr><th>Venta</th><th>Moto</th><th>Régimen</th><th class="num">Compra</th><th class="num">Venta</th><th class="num">Margen</th><th class="num">IVA</th><th class="num">Gastos moto</th><th class="num">Neto</th><th></th></tr></thead>
@@ -645,6 +648,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
             <button type="button" class="estado-btn" id="btn-reservado" onclick="setEstado('Reservado')">⏸ Reservado</button>
             <button type="button" class="estado-btn" id="btn-vendido" onclick="setEstado('Vendido')">✗ Vendido</button>
             <button type="button" class="estado-btn" id="btn-empresa" onclick="setEstado('Uso empresa')">◆ Uso empresa</button>
+            <button type="button" class="estado-btn" id="btn-oculto" onclick="setEstado('Oculto')">◌ Oculto</button>
           </div>
           <input type="hidden" id="v-estado" value="Visible"/>
         </div>
@@ -1013,6 +1017,7 @@ function setEstado(e){
   const br=document.getElementById('btn-reservado');if(br)br.className='estado-btn'+(e==='Reservado'?' active-reservado':'');
   const bvd=document.getElementById('btn-vendido');if(bvd)bvd.className='estado-btn'+(e==='Vendido'?' active-vendido':'');
   const bem=document.getElementById('btn-empresa');if(bem)bem.className='estado-btn'+(e==='Uso empresa'?' active-reservado':'');
+  const boc=document.getElementById('btn-oculto');if(boc)boc.className='estado-btn'+(e==='Oculto'?' active-reservado':'');
 }
 
 function openModalVehiculo(id=null){
@@ -1099,7 +1104,7 @@ function renderVehiculos(){
       <td>${v.km?Number(v.km).toLocaleString('es-ES')+' km':'—'}</td>
       <td>${v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'—'}</td>
       <td><span class="badge badge-blue">${(v.fotos||[]).length} fotos</span></td>
-      <td>${(()=>{const d=(v.estado==='Visible'||v.estado==='Reservado')?diasEnStock(v):null;const ok=docsEntradaOk(v);return `${d!==null?`<div class="dias-stock ${d>=DIAS_STOCK_AVISO?'viejo':''}">${d} días</div>`:''}<div class="doc-pill ${ok===DOCS_ENTRADA.length?'ok':'falta'}">Docs ${ok}/${DOCS_ENTRADA.length}</div>${window.docCount&&docCount(v.id)?`<div class="doc-pill">📎 ${docCount(v.id)} archivo${docCount(v.id)>1?'s':''}</div>`:''}`;})()}</td>
+      <td>${(()=>{const d=(v.estado==='Visible'||v.estado==='Reservado'||v.estado==='Oculto')?diasEnStock(v):null;const ok=docsEntradaOk(v);return `${d!==null?`<div class="dias-stock ${d>=DIAS_STOCK_AVISO?'viejo':''}">${d} días</div>`:''}<div class="doc-pill ${ok===DOCS_ENTRADA.length?'ok':'falta'}">Docs ${ok}/${DOCS_ENTRADA.length}</div>${window.docCount&&docCount(v.id)?`<div class="doc-pill">📎 ${docCount(v.id)} archivo${docCount(v.id)>1?'s':''}</div>`:''}`;})()}</td>
       <td>${estadoBadge(v.estado)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn-outline btn-sm" onclick="openModalVehiculo(${v.id})">Editar</button>
@@ -1120,6 +1125,7 @@ function estadoBadge(e){
   if(e==='Visible')return'<span class="badge badge-green">Visible</span>';
   if(e==='Reservado')return'<span class="badge badge-gold">Reservado</span>';
   if(e==='Uso empresa')return'<span class="badge badge-blue">Uso empresa</span>';
+  if(e==='Oculto')return'<span class="badge badge-muted">Oculto</span>';
   return'<span class="badge badge-red">Vendido</span>';
 }
 
@@ -2106,7 +2112,9 @@ function imprimirFactura(){
           </select></div>
         <div class="form-group full"><label>Concepto</label><input class="f-input" id="g-concepto" placeholder="Grúa desde Valencia…"/></div>
         <div class="form-group"><label>Importe pagado (€)</label><input class="f-input" id="g-importe" type="number" step="0.01" min="0"/></div>
-        <div class="form-group"><label>Moto asociada</label><select class="f-input" id="g-op"></select></div>
+        <div class="form-group"><label>Matrícula de la moto</label><input class="f-input" id="g-mat" list="dl-g-mats" placeholder="Vacío = gasto general" oninput="gMatInfo()" autocomplete="off" style="text-transform:uppercase"/><input type="hidden" id="g-op"/>
+          <span class="form-hint" id="g-mat-info"></span></div>
+        <datalist id="dl-g-mats"></datalist>
         <div class="form-group full"><label class="chk" style="text-transform:none;letter-spacing:0;font-size:0.8rem;"><input type="checkbox" id="g-iva" checked/>Tiene factura con IVA (21%) deducible</label>
           <span class="form-hint">Desmárcalo para tasas de la DGT, seguros o pagos sin factura: no llevan IVA deducible.</span></div>
       </div>
@@ -2163,6 +2171,14 @@ const IVA_T=0.21;
 const CONTA_USERS=['julio','hugo']; // quién ve la contabilidad
 const CONTA_DEF={yo:'Julio',socio:'Socio',is:15,isDesde:'2027-01-01',ret:19,inicio:'2027-01-01'};
 function enConta(f){return !!f && f>=contaCfg().inicio;}
+function setInicioConta(f){const c=contaCfg();c.inicio=f;localStorage.setItem('vcr_contacfg',JSON.stringify(c));}
+function avisoFueraConta(f){
+  // Si la fecha es anterior al inicio de la contabilidad, ofrece adelantar el inicio para que cuente
+  if(!f||enConta(f))return;
+  const ini=contaCfg().inicio, nuevo=f.slice(0,8)+'01';
+  if(confirm(`Esta fecha (${formatDate(f)}) es anterior al inicio de la contabilidad (${formatDate(ini)}), así que no se sumaría en el panel.\n\n¿Quieres que la contabilidad empiece el ${formatDate(nuevo)} para que cuente?`))setInicioConta(nuevo);
+}
+function empezarContaMes(){const m=mesSel();setInicioConta(m+'-01');renderConta();}
 function opEnConta(o){return enConta(o.fechaVenta||o.fechaCompra||'9999-12-31');}
 const REG_TXT={rebu:'REBU',deposito:'Depósito',general:'General'};
 
@@ -2205,7 +2221,7 @@ function opCalc(o,gastos){
 }
 function resumenMes(mes){
   const cfg=contaCfg(), ops=load('ops'), gastos=load('gastos');
-  const opsMes=ops.filter(o=>enConta(o.fechaVenta)&&o.fechaVenta.slice(0,7)===mes);
+  const opsMes=ops.filter(o=>enConta(o.fechaVenta)&&o.fechaVenta.slice(0,7)===mes&&!o.revisar);
   const gMes=gastos.filter(g=>enConta(g.fecha)&&g.fecha.slice(0,7)===mes);
   let margen=0,ivaOps=0,ingresoNeto=0,gBase=0,gIva=0,yo=0,socio=0,benefSL=0;
   opsMes.forEach(o=>{const c=opCalc(o,gastos);margen+=c.margen;ivaOps+=c.ivaOp;ingresoNeto+=c.resultado;
@@ -2229,8 +2245,9 @@ function ivaTrimestre(mes){
 function renderConta(){
   applyContaAccess();
   if(!(currentUser && CONTA_USERS.includes(currentUser.user))){document.getElementById('page-contabilidad').innerHTML='<div class="empty"><div class="empty-text">No tienes acceso a la contabilidad.</div></div>';return;}
+  syncContaContratos();
   const mes=mesSel(), r=resumenMes(mes), cfg=r.cfg, gastos=load('gastos'), ops=load('ops');
-  document.getElementById('conta-inicio-nota').textContent=(mes+'-31')<cfg.inicio?`La contabilidad empieza el ${formatDate(cfg.inicio)}. Lo anterior lo lleva Veloce Cars y no se incluye aquí.`:`Contabilidad desde el ${formatDate(cfg.inicio)}.`;
+  document.getElementById('conta-inicio-nota').innerHTML=(mes+'-31')<cfg.inicio?`<span style="color:var(--gold)">Este mes no cuenta: la contabilidad empieza el ${formatDate(cfg.inicio)}.</span> Lo que apuntes aquí se guarda pero no se suma. <button class="btn-outline btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button>`:`Contabilidad desde el ${formatDate(cfg.inicio)}.`;
   const S=(id,v)=>document.getElementById(id).innerHTML=v;
   S('cs-margen',eur(r.margen,0)); S('cs-margen-sub',`<b>${r.opsMes.length}</b> moto${r.opsMes.length===1?'':'s'} vendida${r.opsMes.length===1?'':'s'}`);
   S('cs-gastos',eur(r.gBase,0)); S('cs-gastos-sub',`<b>${r.gMes.length}</b> gasto${r.gMes.length===1?'':'s'} · IVA soportado ${eur(r.gIva,0)}`);
@@ -2258,7 +2275,12 @@ function renderConta(){
     <td class="num ${cls(c.margen)}">${eur(c.margen)}</td><td class="num">${eur(c.ivaOp)}</td>
     <td class="num">${c.gBase?'−'+eur(c.gBase):'—'}</td><td class="num ${c.neto<0?'neg':'pos'}">${eur(c.neto)}</td>
     <td><button class="btn-outline btn-sm" onclick="openModalOp('${o.id}')">Editar</button></td></tr>`;}).join('')
-    :`<tr><td colspan="10" class="empty-text" style="text-align:center;padding:2rem;color:var(--muted);">No hay motos vendidas en este mes. Añade una o impórtalas desde los contratos.</td></tr>`;
+    :`<tr><td colspan="10" class="empty-text" style="text-align:center;padding:2rem;color:var(--muted);">No hay motos vendidas en este mes. Se añaden solas al generar el contrato de venta.</td></tr>`;
+  const rev=ops.filter(o=>o.revisar&&enConta(o.fechaVenta)&&o.fechaVenta.slice(0,7)===mes);
+  if(rev.length)document.getElementById('tbody-ops').innerHTML=(r.opsMes.length?document.getElementById('tbody-ops').innerHTML:'')+rev.map(o=>`<tr>
+    <td>${formatDate(o.fechaVenta)}</td><td>${escH(o.modelo)}<div class="form-hint">${escH(o.matricula)}</div></td>
+    <td colspan="7"><span class="badge badge-red">Revisar</span> <span class="form-hint">Hay contrato de venta pero no de compra ni de depósito: no se suma hasta que pongas el precio de compra.</span></td>
+    <td><button class="btn-outline btn-sm" onclick="openModalOp('${o.id}')">Completar</button></td></tr>`).join('');
 
   const opName=id=>{const o=ops.find(x=>String(x.id)===String(id));return o?`${escH(o.modelo)} <span class="form-hint">${escH(o.matricula)}</span>`:'<span class="form-hint">General</span>';};
   document.getElementById('tbody-gastos').innerHTML=r.gMes.length? r.gMes.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g=>`<tr>
@@ -2270,16 +2292,17 @@ function renderConta(){
   renderGarantias();
   const abiertas=ops.filter(o=>!o.fechaVenta&&opEnConta(o)).sort((a,b)=>(a.usoEmpresa?1:0)-(b.usoEmpresa?1:0));
   document.getElementById('tbody-abiertas').innerHTML=abiertas.length? abiertas.map(o=>{const c=opCalc(o,gastos);return `<tr>
-    <td>${o.fechaCompra?formatDate(o.fechaCompra):'—'}</td><td>${escH(o.modelo)}<div class="form-hint">${escH(o.matricula)}</div></td>
+    <td>${o.fechaCompra?formatDate(o.fechaCompra):'—'}</td><td>${escH(o.modelo)}<div class="form-hint">${escH(o.matricula)}</div>${vendidaSinContrato(o)?'<div class="form-hint" style="color:var(--red)">Marcada como vendida pero sin contrato de venta: genera el contrato o edítala para poner la venta.</div>':''}</td>
     <td>${o.usoEmpresa?'<span class="badge badge-blue">Uso empresa</span>':`<span class="badge ${o.regimen==='deposito'?'badge-blue':o.regimen==='general'?'badge-muted':'badge-gold'}">${REG_TXT[o.regimen]||''}</span>`}</td>
     <td class="num">${eur(o.precioCompra)}</td><td class="num">${c.gBase?eur(c.gBase):'—'}</td><td class="num">${eur((o.precioCompra||0)+c.gBase)}</td>
     <td><button class="btn-outline btn-sm" onclick="openModalOp('${o.id}')">Editar</button></td></tr>`;}).join('')
-    :`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">Ninguna. Crea la moto aquí al comprarla para ir sumándole gastos antes de venderla.</td></tr>`;
+    :`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">Ninguna. Aparecen solas al generar el contrato de compra o depósito.</td></tr>`;
 }
+function vendidaSinContrato(o){const v=load('vehiculos').find(x=>(x.matricula||'').toUpperCase()===(o.matricula||'').toUpperCase());return !!(v&&v.estado==='Vendido'&&!o.fechaVenta);}
 
 // ── Garantías ──
 function sumarAnio(f){const d=new Date(f+'T12:00:00');d.setFullYear(d.getFullYear()+1);return d.toISOString().slice(0,10);}
-function opDeMatricula(mat){mat=(mat||'').toUpperCase();const os=load('ops').filter(o=>o.matricula===mat);return os.sort((a,b)=>(a.fechaVenta||'').localeCompare(b.fechaVenta||'')).pop();}
+function opDeMatricula(mat){mat=(mat||'').replace(/\s/g,'').toUpperCase();const os=load('ops').filter(o=>(o.matricula||'').toUpperCase()===mat);return os.find(o=>!o.fechaVenta)||os.sort((a,b)=>(a.fechaVenta||'').localeCompare(b.fechaVenta||'')).pop();}
 function renderGarantias(){
   const hoy=hoyISO(), gastos=load('gastos');
   const vs=load('contratos').filter(k=>k.tipo==='venta'&&enConta(k.fecha)&&sumarAnio(k.fecha)>=hoy).sort((a,b)=>sumarAnio(a.fecha).localeCompare(sumarAnio(b.fecha)));
@@ -2301,8 +2324,7 @@ function gastoGarantia(mat){
   openModalGasto();
   document.getElementById('g-cat').value='Garantía';
   document.getElementById('g-concepto').value='Reparación en garantía '+mat;
-  if(op) document.getElementById('g-op').value=op.id;
-  else alert('Esta moto no está en la contabilidad: el gasto quedará como general. Importa o crea antes la venta para asignárselo.');
+  document.getElementById('g-mat').value=(mat||'').toUpperCase(); gMatInfo();
 }
 
 // ── Operaciones ──
@@ -2339,7 +2361,10 @@ function saveOp(){
   const ops=load('ops'); const id=G('op-id');
   const o={id:id||String(Date.now()),matricula:mat,modelo,regimen:G('op-reg'),fechaCompra:G('op-fcompra'),precioCompra:parseFloat(G('op-pcompra'))||0,fechaVenta:G('op-fventa'),precioVenta:parseFloat(G('op-pventa'))||0,notas:G('op-notas'),usoEmpresa:document.getElementById('op-empresa').checked};
   if(o.usoEmpresa&&o.fechaVenta&&!confirm('Has marcado uso de la empresa pero tiene fecha de venta. ¿Guardarlo igualmente como vendido?'))return;
+  const prev=ops.find(x=>String(x.id)===String(id)); if(prev)['kEnt','kVen','kPP','auto'].forEach(f=>{if(prev[f])o[f]=prev[f];});
+  o.manual=true; o.revisar=false;
   const i=ops.findIndex(x=>String(x.id)===String(id)); if(i>=0)ops[i]=o; else ops.push(o);
+  avisoFueraConta(o.fechaVenta||o.fechaCompra);
   save('ops',ops); closeModal('modal-op');
   if(o.fechaVenta){document.getElementById('conta-mes').value=o.fechaVenta.slice(0,7);}
   renderConta();
@@ -2348,6 +2373,8 @@ function deleteOp(){
   const id=document.getElementById('op-id').value; if(!id)return;
   const ligados=load('gastos').filter(g=>String(g.opId)===String(id)).length;
   if(!confirm(`¿Eliminar esta moto de la contabilidad?${ligados?`\nSus ${ligados} gasto(s) pasarán a gastos generales.`:''}`))return;
+  const del=load('ops').find(o=>String(o.id)===String(id));
+  if(del&&(del.kEnt||del.kVen||del.kPP)){alert('Esta moto viene de un contrato. Para quitarla de la contabilidad, borra el contrato en Contratos.');return;}
   save('ops',load('ops').filter(o=>String(o.id)!==String(id)));
   save('gastos',load('gastos').map(g=>String(g.opId)===String(id)?{...g,opId:''}:g));
   closeModal('modal-op'); renderConta();
@@ -2369,25 +2396,103 @@ function importarVentasContratos(){
   alert(n?`${n} venta(s) importadas. Revisa cada una: el régimen y el precio de compra se han deducido de los contratos y pueden no ser exactos.`:`No hay ventas nuevas desde el ${formatDate(contaCfg().inicio)} que no estén ya en la contabilidad.`);
 }
 
+// ── Sincronización automática: contratos → contabilidad ──
+// Cada compra o depósito abre una "moto" en contabilidad; la venta siguiente de esa matrícula la cierra.
+// Si editas una moto a mano, se respetan tus cambios y solo se rellenan los huecos.
+function syncContaContratos(){
+  const ks=load('contratos'), vs=load('vehiculos'), gastos=load('gastos');
+  let ops=load('ops'); const N=x=>String(x||'').replace(/\s/g,'').toUpperCase(), kid=k=>String(k.id);
+  const ciclos=[], porMat={};
+  ks.filter(k=>['compra','deposito','venta'].includes(k.tipo)&&N(k.matricula)).forEach(k=>(porMat[N(k.matricula)]=porMat[N(k.matricula)]||[]).push(k));
+  Object.entries(porMat).forEach(([m,lista])=>{
+    lista.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')||((a.tipo==='venta')-(b.tipo==='venta')));
+    let abierto=null;
+    lista.forEach(k=>{
+      if(k.tipo==='venta'){ if(abierto){abierto.ven=k;ciclos.push(abierto);abierto=null;} else ciclos.push({m,ent:null,ven:k}); }
+      else { abierto={m,ent:k,ven:null}; } // si había un depósito sin vender y luego Veloce la compra, cuenta la compra
+    });
+    if(abierto)ciclos.push(abierto);
+  });
+  // Vehículos recibidos como parte de pago
+  ks.filter(k=>k.tipo==='venta'&&k.pp&&Number(k.pp.valor)>0&&N(k.pp.matricula)).forEach(k=>ciclos.push({m:N(k.pp.matricula),pp:k}));
+
+  const vivos=new Set();
+  ciclos.forEach(c=>{
+    const v=vs.find(x=>N(x.matricula)===c.m);
+    const nombre=c.pp?(c.pp.pp.modelo||c.m):v?`${v.marca==='Otra'?'':v.marca+' '}${v.modelo}`.trim():((c.ent||c.ven).modelo||c.m);
+    const datos=c.pp
+      ?{matricula:c.m,modelo:nombre,regimen:'rebu',fechaCompra:c.pp.fecha||'',precioCompra:numC(c.pp.pp.valor),fechaVenta:'',precioVenta:0,kPP:kid(c.pp),revisar:false}
+      :{matricula:c.m,modelo:nombre,regimen:c.ent&&c.ent.tipo==='deposito'?'deposito':'rebu',
+        fechaCompra:c.ent?c.ent.fecha:'',precioCompra:c.ent?numC(c.ent.precio):0,
+        fechaVenta:c.ven?c.ven.fecha:'',precioVenta:c.ven?numC(c.ven.precio):0,
+        kEnt:c.ent?kid(c.ent):'',kVen:c.ven?kid(c.ven):'',revisar:!c.ent};
+    let o=ops.find(x=>(datos.kPP&&x.kPP===datos.kPP)||(datos.kEnt&&x.kEnt===datos.kEnt)||(datos.kVen&&x.kVen===datos.kVen));
+    const cerca=(a,b)=>!a||!b||Math.abs(new Date(a)-new Date(b))<=31*864e5;
+    if(!o) o=ops.find(x=>!x.kEnt&&!x.kVen&&!x.kPP&&N(x.matricula)===c.m&&cerca(x.fechaVenta,datos.fechaVenta));
+    if(!o){o={id:'k'+(datos.kPP||datos.kEnt||datos.kVen),auto:true,notas:''};ops.push(o);}
+    vivos.add(String(o.id));
+    if(o.manual||!o.auto){ // creada o editada a mano: respetar
+      ['fechaCompra','fechaVenta','modelo'].forEach(f=>{if(!o[f]&&datos[f])o[f]=datos[f];});
+      ['precioCompra','precioVenta'].forEach(f=>{if(!o[f]&&datos[f])o[f]=datos[f];});
+      ['kEnt','kVen','kPP'].forEach(f=>{if(datos[f])o[f]=datos[f];});
+    } else Object.assign(o,datos);
+    if(v&&v.estado==='Uso empresa'&&!o.fechaVenta)o.usoEmpresa=true;
+  });
+  ops=ops.filter(o=>{
+    if(!o.auto||o.manual||vivos.has(String(o.id)))return true;
+    return gastos.some(g=>String(g.opId)===String(o.id));
+  });
+  save('ops',ops);
+}
+
 // ── Gastos ──
 function openModalGasto(id){
+  syncContaContratos();
   const g=id?load('gastos').find(x=>String(x.id)===String(id)):null;
-  const ops=load('ops').slice().sort((a,b)=>(b.fechaVenta||'9999').localeCompare(a.fechaVenta||'9999'));
-  document.getElementById('g-op').innerHTML='<option value="">Gasto general (no es de una moto)</option>'+ops.map(o=>`<option value="${escH(o.id)}">${escH(o.modelo)} ${escH(o.matricula)}${o.fechaVenta?'':' · en stock'}</option>`).join('');
+  const mats={};
+  load('vehiculos').forEach(v=>{if(v.matricula)mats[v.matricula.toUpperCase()]=`${v.marca==='Otra'?'':v.marca+' '}${v.modelo}`.trim();});
+  load('ops').forEach(o=>{if(o.matricula&&!mats[o.matricula])mats[o.matricula]=o.modelo;});
+  document.getElementById('dl-g-mats').innerHTML=Object.entries(mats).map(([m,n])=>`<option value="${escH(m)}">${escH(n)}</option>`).join('');
   const V=(k,v)=>document.getElementById(k).value=v??'';
   V('g-id',g?g.id:''); V('g-fecha',g?g.fecha:hoyISO()); V('g-cat',g?g.categoria:'Transporte'); V('g-concepto',g?g.concepto:'');
-  V('g-importe',g?g.importe:''); V('g-op',g?g.opId:''); document.getElementById('g-iva').checked=g?!!g.conIva:true;
+  V('g-importe',g?g.importe:''); V('g-op',g?g.opId:''); const gop=g&&g.opId?load('ops').find(o=>String(o.id)===String(g.opId)):null; V('g-mat',gop?gop.matricula:''); gMatInfo(); document.getElementById('g-iva').checked=g?!!g.conIva:true;
   document.getElementById('g-del').style.display=g?'':'none';
   document.getElementById('g-title').innerHTML=(g?'Editar ':'Nuevo ')+'<em style="font-style:italic;color:var(--gold)">gasto</em>';
   openModal('modal-gasto');
+}
+function gMatInfo(){
+  const m=(document.getElementById('g-mat').value||'').replace(/\s/g,'').toUpperCase(), el=document.getElementById('g-mat-info');
+  if(!m){el.textContent='Gasto general (no es de una moto)';el.style.color='';return;}
+  const op=opDeMatricula(m), v=load('vehiculos').find(x=>(x.matricula||'').toUpperCase()===m);
+  if(op){el.textContent=`${op.modelo} · se descuenta de su beneficio`;el.style.color='var(--green)';}
+  else if(v){el.textContent=`${v.marca==='Otra'?'':v.marca+' '}${v.modelo} · se añadirá a la contabilidad al guardar`;el.style.color='var(--gold)';}
+  else{el.textContent='Matrícula no encontrada';el.style.color='var(--red)';}
+}
+function opParaMatricula(m){
+  // Devuelve la moto de contabilidad con esa matrícula; si no existe, la crea a partir del vehículo y sus contratos
+  m=(m||'').replace(/\s/g,'').toUpperCase(); if(!m)return '';
+  syncContaContratos();
+  const ya=opDeMatricula(m); if(ya)return ya.id;
+  const v=load('vehiculos').find(x=>(x.matricula||'').toUpperCase()===m);
+  if(!v&&!confirm(`No encuentro la matrícula ${m} en Vehículos.\n\n¿Crear la moto en contabilidad con esa matrícula para asignarle el gasto?`))return null;
+  const ks=contratosDe(m).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const ent=ks.filter(k=>k.tipo==='compra'||k.tipo==='deposito').pop();
+  const ven=ks.filter(k=>k.tipo==='venta'&&(!ent||(k.fecha||'')>=(ent.fecha||''))).pop();
+  const op={id:String(Date.now())+'m',matricula:m,modelo:v?`${v.marca==='Otra'?'':v.marca+' '}${v.modelo}`.trim():m,
+    regimen:ent&&ent.tipo==='deposito'?'deposito':'rebu',fechaCompra:ent?ent.fecha:'',precioCompra:ent?numC(ent.precio):0,
+    fechaVenta:ven?ven.fecha:'',precioVenta:ven?numC(ven.precio):0,notas:'Creada al añadir un gasto: revisa precio de compra, venta y régimen.',usoEmpresa:v?v.estado==='Uso empresa':false};
+  const ops=load('ops'); ops.push(op); save('ops',ops); return op.id;
 }
 function saveGasto(){
   const G=k=>document.getElementById(k).value;
   const importe=parseFloat(G('g-importe'));
   if(!G('g-fecha')||!(importe>0)){alert('Indica la fecha y el importe.');return;}
+  const opId=opParaMatricula(G('g-mat')); if(opId===null)return;
+  document.getElementById('g-op').value=opId;
   const gastos=load('gastos'), id=G('g-id');
   const g={id:id||String(Date.now()),fecha:G('g-fecha'),categoria:G('g-cat'),concepto:G('g-concepto').trim()||G('g-cat'),importe,opId:G('g-op'),conIva:document.getElementById('g-iva').checked};
   const i=gastos.findIndex(x=>String(x.id)===String(id)); if(i>=0)gastos[i]=g; else gastos.push(g);
+  avisoFueraConta(g.fecha);
   save('gastos',gastos); closeModal('modal-gasto'); document.getElementById('conta-mes').value=g.fecha.slice(0,7); renderConta();
 }
 function deleteGasto(){
@@ -2563,7 +2668,7 @@ function saveExp(){
 function calcularAvisos(){
   const hoy=hoyStr(), desde=avisosDesde(), A=[];
   const vs=load('vehiculos'), ks=load('contratos'), leads=load('leads'), citas=load('citas');
-  const enStock=vs.filter(v=>v.estado==='Visible'||v.estado==='Reservado');
+  const enStock=vs.filter(v=>v.estado==='Visible'||v.estado==='Reservado'||v.estado==='Oculto');
   const posterior=(mat,fecha,tipos)=>contratosDe(mat).some(k=>tipos.includes(k.tipo)&&(k.fecha||'')>=fecha);
   // Citas de hoy
   const cHoy=citas.filter(c=>c.fecha===hoy);
@@ -2604,7 +2709,7 @@ function calcularAvisos(){
   const viejos=enStock.filter(v=>{const d=diasEnStock(v);return d!==null&&d>=DIAS_STOCK_AVISO;});
   if(viejos.length)A.push({n:'media',t:`${viejos.length} vehículo${viejos.length>1?'s':''} con más de ${DIAS_STOCK_AVISO} días en stock`,s:viejos.slice(0,4).map(v=>`${eH(v.modelo)} (${diasEnStock(v)} d)`).join(', ')+' · revisa precio o anuncios',go:'vehiculos'});
   // Sin fotos
-  const sinFotos=enStock.filter(v=>!(v.fotos||[]).length);
+  const sinFotos=enStock.filter(v=>v.estado!=='Oculto'&&!(v.fotos||[]).length);
   if(sinFotos.length)A.push({n:'baja',t:`${sinFotos.length} vehículo${sinFotos.length>1?'s':''} visible${sinFotos.length>1?'s':''} sin fotos`,s:'En la web se venden mucho peor sin foto',go:'vehiculos'});
   const orden={alta:0,media:1,baja:2}; return A.sort((a,b)=>orden[a.n]-orden[b.n]);
 }
@@ -2778,6 +2883,50 @@ function importarBackup(event){
   reader.readAsText(file);
 }
 
+// ── Juntar un backup con los datos actuales (sin borrar nada) ──
+function juntarBackup(event){
+  const file=event.target.files[0]; event.target.value=''; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    let data; try{data=JSON.parse(e.target.result);}catch{alert('El archivo no es un backup válido de este CRM.');return;}
+    if(!confirm('¿Juntar este backup con tus datos?\n\nSe AÑADE lo que no tengas y no se borra nada. Si un mismo registro está en los dos, se queda el de este dispositivo.'))return;
+    const res=[], norm=x=>String(x||'').replace(/\s/g,'').toUpperCase();
+    const unir=(k,etq,dup)=>{
+      if(!Array.isArray(data[k]))return;
+      const cur=load(k), ids=new Set(cur.map(x=>String(x.id))); let n=0;
+      data[k].forEach(x=>{if(ids.has(String(x.id)))return; if(dup&&cur.some(c=>dup(c,x)))return; cur.push(x); ids.add(String(x.id)); n++;});
+      save(k,cur); if(n)res.push(`${n} ${etq}`);
+    };
+    unir('vehiculos','vehículos',(a,b)=>norm(a.matricula)&&norm(a.matricula)===norm(b.matricula));
+    unir('clientes','clientes',(a,b)=>norm(a.dni)&&norm(a.dni)===norm(b.dni));
+    unir('contratos','contratos');
+    unir('citas','citas');
+    unir('leads','interesados');
+    unir('ops','motos en contabilidad',(a,b)=>norm(a.matricula)&&norm(a.matricula)===norm(b.matricula)&&(a.fechaVenta||'')===(b.fechaVenta||''));
+    unir('gastos','gastos');
+    unir('reparto','tramos de reparto',(a,b)=>a.desde===b.desde);
+    // Tareas: añade las nuevas y junta las notas de las que están en los dos
+    if(Array.isArray(data.tareas)){const cur=load('tareas');let n=0,nn=0;
+      data.tareas.forEach(t=>{const c=cur.find(x=>String(x.id)===String(t.id));
+        if(!c){cur.push(t);n++;return;}
+        (t.notas||[]).forEach(no=>{if(!(c.notas||[]).some(z=>z.at===no.at&&z.t===no.t)){(c.notas=c.notas||[]).push(no);nn++;}});
+        if(t.hecha)c.hecha=true;});
+      save('tareas',cur); if(n)res.push(`${n} tareas`); if(nn)res.push(`${nn} notas`);}
+    // Expedientes: completa lo que falte
+    if(data.expedientes){const cur=JSON.parse(localStorage.getItem('vcr_expedientes')||'{}');let n=0;
+      Object.entries(data.expedientes).forEach(([id,e])=>{if(!cur[id]){cur[id]=e;n++;return;}
+        Object.entries(e).forEach(([k,v])=>{if(v&&!cur[id][k])cur[id][k]=v;});});
+      localStorage.setItem('vcr_expedientes',JSON.stringify(cur)); if(n)res.push(`${n} expedientes`);}
+    // Documentos
+    if(Array.isArray(data.documentos)){try{let n=0;
+      for(const d of data.documentos){if(await DOCDB.get(d.id))continue;const blob=await (await fetch(d.data)).blob();const {data:_,...meta}=d;await DOCDB.put({...meta,blob});n++;}
+      const cnt={};(await DOCDB.all()).forEach(d=>cnt[d.vehId]=(cnt[d.vehId]||0)+1);localStorage.setItem('vcr_doccount',JSON.stringify(cnt));
+      if(n)res.push(`${n} documentos`);}catch(err){res.push('(no se pudieron juntar los documentos)');}}
+    alert(res.length?`Juntado. Se han añadido: ${res.join(', ')}.\n\nLa página se va a recargar.`:'No había nada nuevo en ese backup: ya tenías todo.'); if(res.length)location.reload();
+  };
+  reader.readAsText(file);
+}
+
 // ══ AGENDA (calendario por días) ══
 let agendaMes=hoyStr().slice(0,7), agendaDia=hoyStr();
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -2792,7 +2941,7 @@ function autoEventos(){ // recordatorios que salen solos de otros apartados
   const posterior=(mat,f,tipos)=>contratosDe(mat).some(k=>tipos.includes(k.tipo)&&(k.fecha||'')>=f);
   ks.filter(k=>k.tipo==='reserva'&&k.fecha&&parseInt(k.plazo)&&!posterior(k.matricula,k.fecha,['venta'])).forEach(k=>E.push({f:addDias(k.fecha,parseInt(k.plazo)),t:`Caduca reserva ${k.modelo}`,cls:'ev-alerta',go:'contratos'}));
   ks.filter(k=>k.tipo==='deposito'&&k.fecha&&parseInt(k.plazo)&&!posterior(k.matricula,k.fecha,['venta','compra'])).forEach(k=>E.push({f:addDias(k.fecha,parseInt(k.plazo)),t:`Vence depósito ${k.modelo}`,cls:'ev-alerta',go:'contratos'}));
-  vs.filter(v=>v.estado==='Visible'||v.estado==='Reservado').forEach(v=>{const e=expDe(v);if(e.itv)E.push({f:e.itv,t:`Caduca ITV ${v.modelo}`,cls:'ev-alerta',exp:v.id});});
+  vs.filter(v=>v.estado==='Visible'||v.estado==='Reservado'||v.estado==='Oculto').forEach(v=>{const e=expDe(v);if(e.itv)E.push({f:e.itv,t:`Caduca ITV ${v.modelo}`,cls:'ev-alerta',exp:v.id});});
   return E;
 }
 function itemsDia(f,auto){
