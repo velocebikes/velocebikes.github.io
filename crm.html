@@ -169,9 +169,14 @@ textarea.f-input{resize:vertical;min-height:80px;}
 @media print{
   .topbar,.sidebar,.page-header,.table-wrap,.btn-primary,.btn-outline,.modal-bg,.page:not(#page-contratos){display:none!important;}
   #page-contratos{margin:0;padding:0;}
-  #contrato-preview{display:block!important;}
+  #contrato-preview{display:block!important;padding:0 16mm!important;max-width:none!important;}
   body{background:white;}
+  /* margen 0 = el navegador no imprime la dirección web ni la fecha en el PDF */
+  @page{margin:0;}
+  .pw-sp{height:14mm;}
 }
+#contrato-preview table.print-wrap{border:none;margin:0;width:100%;font-size:inherit;}
+#contrato-preview table.print-wrap>thead>tr>td,#contrato-preview table.print-wrap>tbody>tr>td,#contrato-preview table.print-wrap>tfoot>tr>td{border:none;padding:0;}
 /* CONTABILIDAD */
 .conta-bar{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;}
 .conta-bar input[type=month]{width:auto;padding:0.55rem 0.8rem;color-scheme:dark;}
@@ -1436,7 +1441,7 @@ function verContrato(id){
     ${(()=>{const vv=k.matricula?load('vehiculos').find(v=>(v.matricula||'').toUpperCase()===k.matricula.toUpperCase()):null;return BL?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${L}</td></tr>`:vv&&vv.llaves?`<tr><td style="padding:0.55rem 0.9rem;border:1px solid #333;background:#e8e8e8;font-weight:700;color:#111;">Llaves</td><td style="padding:0.55rem 0.9rem;border:1px solid #333;color:#111;">${vv.llaves}</td></tr>`:'';})()}
   </table>`;
 
-  const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;">
+  const firmas=(a,b)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3rem;break-inside:avoid;page-break-inside:avoid;">
     <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:6rem;padding-top:0.5rem;font-size:10pt;">${a}</div></div>
     <div style="text-align:center"><div style="border-top:1px solid #333;margin-top:6rem;padding-top:0.5rem;font-size:10pt;">${b}</div></div>
   </div>`;
@@ -1566,7 +1571,7 @@ function verContrato(id){
     ${firmas('VELOCE CARS BOUTIQUE S.L.<br>Firma: ______________________<br>Nombre: _____________________',`EL COMPRADOR<br>Firma: ______________________<br>Nombre: ${k.nombre} ${k.apellidos}`)}`;
   }
 
-  document.getElementById('contrato-preview').innerHTML=html;
+  document.getElementById('contrato-preview').innerHTML=`<table class="print-wrap"><thead><tr><td><div class="pw-sp"></div></td></tr></thead><tbody><tr><td>${html}</td></tr></tbody><tfoot><tr><td><div class="pw-sp"></div></td></tr></tfoot></table>`;
   // Nombre del PDF al guardar: CONTRATO COMPRA JAVIER CARMONA 1234KKK
   const TIPO_PDF={deposito:'GESTIÓN DE VENTA',compra:'COMPRA',reserva:'RESERVA',venta:'VENTA'};
   const ap1=(k.apellidos||'').trim().split(/\s+/)[0]||'';
@@ -2057,7 +2062,7 @@ function imprimirFactura(){
   const contenido = document.getElementById('factura-preview').innerHTML;
   const ventana = window.open('','_blank','width=700,height=1000');
   ventana.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura ${numero} - Veloce Cars</title>
-  <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:white;padding:30px;}@media print{@page{margin:15mm;}body{padding:0;}}</style>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:white;padding:30px;}@media print{@page{margin:0;}body{padding:15mm;}}</style>
   </head><body>${contenido}</body></html>`);
   ventana.document.close();
   setTimeout(()=>ventana.print(), 500);
@@ -2773,7 +2778,7 @@ function filasLibro(){
 function libroRegistro(){
   const f=filasLibro(), w=window.open('','_blank'); if(!w){alert('Permite las ventanas emergentes para ver el libro.');return;}
   const td=s=>`<td>${eH(s)}</td>`;
-  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Libro registro de operaciones</title><style>body{font-family:Arial,sans-serif;font-size:10px;padding:20px;color:#111}h1{font-size:16px;margin-bottom:4px}p{margin:0 0 12px;color:#555}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:4px;text-align:left;vertical-align:top}th{background:#eee}button{margin-bottom:12px;padding:6px 12px}@media print{button{display:none}@page{size:landscape;margin:10mm}}</style></head><body>
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Libro registro de operaciones</title><style>body{font-family:Arial,sans-serif;font-size:10px;padding:20px;color:#111}h1{font-size:16px;margin-bottom:4px}p{margin:0 0 12px;color:#555}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:4px;text-align:left;vertical-align:top}th{background:#eee}button{margin-bottom:12px;padding:6px 12px}@media print{button{display:none}@page{size:landscape;margin:0}body{padding:10mm!important}}</style></head><body>
   <button onclick="print()">Imprimir / PDF</button><h1>Libro registro de operaciones de vehículos</h1><p>Generado el ${formatDate(hoyStr())} · ${f.length} operaciones</p>
   <table><thead><tr><th>Nº</th><th>Fecha</th><th>Operación</th><th>Vehículo</th><th>Matrícula</th><th>Bastidor</th><th>Km</th><th>Nombre y apellidos</th><th>DNI</th><th>Domicilio</th><th>Teléfono</th><th>Precio (€)</th></tr></thead><tbody>
   ${f.map(r=>`<tr>${td(r.n)}${td(formatDate(r.fecha))}${td(r.tipo)}${td(r.vehiculo)}${td(r.matricula)}${td(r.bastidor)}${td(r.km)}${td(r.persona)}${td(r.dni)}${td(r.direccion)}${td(r.tlf)}${td(r.precio)}</tr>`).join('')}</tbody></table></body></html>`);
