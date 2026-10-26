@@ -461,7 +461,8 @@ textarea.f-input{resize:vertical;min-height:80px;}
     </div>
     <div id="contrato-preview" style="display:none;"></div>
     <div id="contrato-print-actions" style="display:none;gap:1rem;margin-top:1.5rem;">
-      <button class="btn-primary" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      <button class="btn-primary" onclick="descargarContratoPDF()">⬇ Descargar PDF</button>
+      <button class="btn-outline" onclick="window.print()">🖨️ Imprimir</button>
       <button class="btn-outline" onclick="backToContratos()">← Volver</button>
     </div>
   </div>
@@ -1420,8 +1421,13 @@ function editContrato(id){
 
 function deleteContrato(id){if(!confirm('¿Eliminar?'))return;save('contratos',load('contratos').filter(k=>k.id!==id));renderContratos();updateStats();}
 
+// Todo el texto que se rellena sale en MAYÚSCULAS en contratos y facturas
+const MAYUS_CAMPOS=['nombre','apellidos','dir','dni','modelo','matricula','iban','condiciones'];
+function enMayus(k){const c={...k};MAYUS_CAMPOS.forEach(f=>{if(typeof c[f]==='string')c[f]=c[f].toLocaleUpperCase('es-ES');});
+  if(c.pp)c.pp={...c.pp,modelo:String(c.pp.modelo||'').toLocaleUpperCase('es-ES'),matricula:String(c.pp.matricula||'').toUpperCase(),bastidor:String(c.pp.bastidor||'').toUpperCase()};return c;}
 function verContrato(id){
-  const k=typeof id==='object'?id:load('contratos').find(k=>k.id===id);if(!k)return;
+  let k=typeof id==='object'?id:load('contratos').find(k=>k.id===id);if(!k)return;
+  if(!k._blanco)k=enMayus(k);
   const BL=!!k._blanco, L='________________';
   const fd=new Date(k.fecha);
   const M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -1961,6 +1967,7 @@ function siguienteNumFactura(){
 }
 
 function facturaHTML(k, opts){
+  k=enMayus(k);
   const precio = k.precio ? Number(k.precio) : 0;
   let base, ivaImporte, ivaPct, total;
   if(opts.tipoIva==='iva'){
@@ -3035,6 +3042,100 @@ calcularAvisos=function(){
   const o={alta:0,media:1,baja:2};return A.sort((a,b)=>o[a.n]-o[b.n]);
 };
 if(currentUser&&window.renderAvisos)renderAvisos();
+</script>
+
+<script>
+// ══ PDF DIRECTO (sin ventana de imprimir: funciona en móvil y en la app del iPhone) ══
+const PDFW={R:[761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 250, 333, 408, 500, 500, 833, 778, 180, 333, 333, 500, 564, 250, 333, 250, 278, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 278, 278, 564, 564, 564, 444, 921, 722, 667, 667, 722, 611, 556, 722, 722, 333, 389, 722, 611, 889, 722, 722, 556, 722, 667, 556, 611, 722, 722, 944, 722, 722, 611, 333, 278, 333, 469, 500, 333, 444, 500, 444, 500, 444, 333, 500, 500, 278, 278, 500, 278, 778, 500, 500, 500, 500, 333, 389, 278, 500, 500, 722, 500, 500, 444, 480, 200, 480, 541, 761, 500, 0, 333, 500, 444, 1000, 500, 500, 333, 1000, 556, 333, 889, 0, 611, 0, 0, 333, 333, 444, 444, 350, 500, 1000, 333, 980, 389, 333, 722, 0, 444, 722, 250, 333, 500, 500, 500, 500, 200, 500, 333, 760, 276, 500, 564, 333, 760, 333, 400, 564, 300, 300, 333, 500, 453, 250, 333, 300, 310, 500, 750, 750, 750, 444, 722, 722, 722, 722, 722, 722, 889, 667, 611, 611, 611, 611, 333, 333, 333, 333, 722, 722, 722, 722, 722, 722, 722, 564, 722, 722, 722, 722, 722, 722, 556, 500, 444, 444, 444, 444, 444, 444, 667, 444, 444, 444, 444, 444, 278, 278, 278, 278, 500, 500, 500, 500, 500, 500, 500, 564, 500, 500, 500, 500, 500, 500, 500, 500],B:[761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 761, 250, 333, 555, 500, 500, 1000, 833, 278, 333, 333, 500, 570, 250, 333, 250, 278, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 333, 333, 570, 570, 570, 500, 930, 722, 667, 722, 722, 667, 611, 778, 778, 389, 500, 778, 667, 944, 722, 778, 611, 778, 722, 556, 667, 722, 722, 1000, 722, 722, 667, 333, 278, 333, 581, 500, 333, 500, 556, 444, 556, 444, 333, 500, 556, 278, 333, 556, 278, 833, 556, 500, 556, 556, 444, 389, 333, 556, 500, 722, 500, 500, 444, 394, 220, 394, 520, 761, 500, 0, 333, 500, 500, 1000, 500, 500, 333, 1000, 556, 333, 1000, 0, 667, 0, 0, 333, 333, 500, 500, 350, 500, 1000, 333, 1000, 389, 333, 722, 0, 444, 722, 250, 333, 500, 500, 500, 500, 220, 500, 333, 747, 300, 500, 570, 333, 747, 333, 400, 570, 300, 300, 333, 556, 540, 250, 333, 300, 330, 500, 750, 750, 750, 500, 722, 722, 722, 722, 722, 722, 1000, 722, 667, 667, 667, 667, 389, 389, 389, 389, 722, 722, 778, 778, 778, 778, 778, 570, 778, 722, 722, 722, 722, 722, 611, 556, 500, 500, 500, 500, 500, 500, 722, 444, 444, 444, 444, 444, 278, 278, 278, 278, 500, 556, 500, 500, 500, 500, 500, 570, 500, 556, 556, 556, 556, 500, 556, 500]};
+const WIN={0x20AC:128,0x201A:130,0x0192:131,0x201E:132,0x2026:133,0x2020:134,0x2021:135,0x02C6:136,0x2030:137,0x0160:138,0x2039:139,0x0152:140,0x017D:142,0x2018:145,0x2019:146,0x201C:147,0x201D:148,0x2022:149,0x2013:150,0x2014:151,0x02DC:152,0x2122:153,0x0161:154,0x203A:155,0x0153:156,0x017E:158,0x0178:159};
+function pdfCode(ch){const c=ch.codePointAt(0);if(c<128||(c>=160&&c<=255))return c;if(WIN[c])return WIN[c];if(c===0xA0)return 32;return 63;}
+function pdfW(txt,f,sz){let w=0;for(const ch of txt)w+=PDFW[f][pdfCode(ch)]||500;return w*sz/1000;}
+function pdfEsc(txt){let o='';for(const ch of txt){const c=pdfCode(ch);if(c===40||c===41||c===92)o+='\\'+String.fromCharCode(c);else if(c<32||c>126)o+='\\'+c.toString(8).padStart(3,'0');else o+=String.fromCharCode(c);}return o;}
+
+function contratoAPdf(root){
+  const PW=595.28,PH=841.89,ML=62,MR=62,MT=58,MB=62,AW=PW-ML-MR;
+  const pages=[];let ops=null,y=0;
+  const nueva=()=>{ops=[];pages.push(ops);y=PH-MT;};
+  const espacio=h=>{if(y-h<MB)nueva();};
+  const txt=(s,x,yy,f,sz)=>ops.push(`BT /${f} ${sz} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td (${pdfEsc(s)}) Tj ET`);
+  const linea=(x1,y1,x2,y2,w)=>ops.push(`${w} w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
+  const rect=(x,yy,w,h,fill)=>ops.push(fill?`0.91 g ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`:`0.8 w ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S`);
+  // runs de texto con negrita y saltos de línea
+  const runs=(node,bold,out)=>{node.childNodes.forEach(n=>{
+    if(n.nodeType===3)out.push({t:n.textContent.replace(/\s+/g,' '),b:bold});
+    else if(n.nodeName==='BR')out.push({br:true});
+    else if(n.nodeType===1)runs(n,bold||n.nodeName==='STRONG'||n.nodeName==='B'||/bold|[6-9]00/.test(n.style.fontWeight||''),out);});return out;};
+  // reparte palabras en líneas
+  const lineas=(rs,sz,ancho)=>{const L=[];let cur=[],w=0;const sp=f=>pdfW(' ',f,sz);
+    const cerrar=(ult)=>{L.push({ws:cur,w,ult});cur=[];w=0;};
+    rs.forEach(r=>{if(r.br){cerrar(true);return;}
+      r.t.split(' ').forEach((p,i,arr)=>{if(p===''){if(i>0&&cur.length)cur[cur.length-1].sp=true;return;}
+        const f=r.b?'B':'R',pw=pdfW(p,f,sz);
+        const pegada=cur.length&&!cur[cur.length-1].sp&&i===0; // continúa palabra entre runs
+        const add=cur.length&&!pegada?sp('R'):0;
+        if(cur.length&&w+add+pw>ancho){cerrar(false);cur.push({t:p,f,w:pw,sp:i<arr.length-1});w=pw;return;}
+        cur.push({t:p,f,w:pw,sp:i<arr.length-1,pegada});w+=add+pw;});});
+    if(cur.length)cerrar(true); if(L.length)L[L.length-1].ult=true; return L;};
+  const parrafo=(el,sz,align,just)=>{const rs=runs(el,false,[]);const L=lineas(rs,sz,AW);const lh=sz*1.42;
+    L.forEach(l=>{espacio(lh);y-=lh;const words=l.ws;if(!words.length)return;
+      const gaps=words.filter((w,i)=>i>0&&!w.pegada).length;let x=ML,extra=0;
+      if(align==='center')x=ML+(AW-l.w)/2; else if(just&&!l.ult&&gaps)extra=(AW-l.w)/gaps;
+      words.forEach((wd,i)=>{if(i>0&&!wd.pegada)x+=pdfW(' ','R',sz)+extra;txt(wd.t,x,y,wd.f==='B'?'F2':'F1',sz);x+=wd.w;});});};
+  nueva();
+  const cuerpo=root.querySelector('table.print-wrap>tbody>tr>td')||root;
+  [...cuerpo.children].forEach(el=>{
+    const tag=el.nodeName;
+    if(tag==='H2'){espacio(40);const t=el.textContent.trim().toUpperCase();const sz=13.5;const L=lineas([{t,b:true}],sz,AW);
+      L.forEach(l=>{y-=sz*1.35;let x=ML+(AW-l.w)/2;l.ws.forEach((wd,i)=>{if(i>0)x+=pdfW(' ','B',sz);txt(wd.t,x,y,'F2',sz);x+=wd.w;});});
+      y-=6;linea(ML,y,ML+AW,y,1.4);y-=6;}
+    else if(tag==='H3'){espacio(48);y-=12;const sz=10.5;y-=sz;txt(el.textContent.trim().toUpperCase(),ML,y,'F2',sz);y-=4;linea(ML,y,ML+AW,y,0.9);y-=4;}
+    else if(tag==='P'){const sub=el.classList.contains('c-subtitle');parrafo(el,sub?9.5:10.2,sub?'center':'left',!sub);y-=sub?12:5;}
+    else if(tag==='TABLE'){const sz=9.8,rh=19,c1=AW*0.42;const filas=[...el.querySelectorAll('tr')];
+      espacio(filas.length*rh+10);y-=6;
+      filas.forEach(tr=>{const td=tr.querySelectorAll('td');y-=rh;rect(ML,y,c1,rh,true);rect(ML,y,c1,rh);rect(ML+c1,y,AW-c1,rh);
+        txt((td[0]?.textContent||'').trim(),ML+8,y+6,'F2',sz);
+        let v=(td[1]?.textContent||'').trim();while(v&&pdfW(v,'R',sz)>AW-c1-14)v=v.slice(0,-1);txt(v,ML+c1+8,y+6,td[1]&&/700|600|bold/.test(td[1].getAttribute('style')||'')?'F2':'F1',sz);});
+      y-=12;}
+    else if(tag==='DIV'&&el.children.length===2){ // firmas
+      const cols=[...el.children].map(c=>{const rs=runs(c,false,[]);const ls=[];let cur='';rs.forEach(r=>{if(r.br){ls.push(cur.trim());cur='';}else cur+=r.t;});if(cur.trim())ls.push(cur.trim());return ls;});
+      const sz=9.5,lh=sz*1.4,n=Math.max(...cols.map(c=>c.length));espacio(80+n*lh);y-=62;const cw=(AW-40)/2;
+      cols.forEach((ls,i)=>{const x0=ML+i*(cw+40);linea(x0,y,x0+cw,y,0.8);let yy=y-lh;
+        ls.forEach(s=>{let t=s;while(t&&pdfW(t,'R',sz)>cw)t=t.slice(0,-1);txt(t,x0+(cw-pdfW(t,'R',sz))/2,yy,'F1',sz);yy-=lh;});});
+      y-=n*lh+10;}
+    else if(el.textContent.trim()){parrafo(el,10.2,'left',true);y-=5;}
+  });
+  // numeración de páginas
+  pages.forEach((p,i)=>{const s=`Página ${i+1} de ${pages.length}`;p.push(`0.45 g BT /F1 8 Tf ${(PW-MR-pdfW(s,'R',8)).toFixed(2)} 30 Td (${pdfEsc(s)}) Tj ET 0 g`);});
+  // ensamblar el PDF
+  const objs=[];const add=s=>{objs.push(s);return objs.length;};
+  const fR=add('<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>');
+  const fB=add('<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>');
+  const pagesId=objs.length+pages.length*2+1; // el objeto Pages va justo después de las páginas
+  const kids=[];
+  pages.forEach(p=>{const c=p.join('\n');const cid=add(`<< /Length ${c.length} >>\nstream\n${c}\nendstream`);
+    kids.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 ${fR} 0 R /F2 ${fB} 0 R >> >> /Contents ${cid} 0 R >>`));});
+  const pid=add(`<< /Type /Pages /Kids [${kids.map(k=>k+' 0 R').join(' ')}] /Count ${kids.length} >>`);
+  const cat=add(`<< /Type /Catalog /Pages ${pid} 0 R >>`);
+  const info=add(`<< /Title (${pdfEsc(document.title)}) /Producer (Veloce CRM) >>`);
+  let out='%PDF-1.4\n';const off=[];
+  objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`;});
+  const xref=out.length;
+  out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  out+=`trailer\n<< /Size ${objs.length+1} /Root ${cat} 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([out],{type:'application/pdf'});
+}
+async function descargarContratoPDF(){
+  const root=document.getElementById('contrato-preview'); if(!root||!root.innerHTML.trim())return;
+  let blob; try{blob=contratoAPdf(root);}catch(e){console.error(e);alert('No se pudo crear el PDF. Usa Imprimir / PDF.');return;}
+  const nombre=(document.title||'CONTRATO')+'.pdf';
+  const file=new File([blob],nombre,{type:'application/pdf'});
+  const movil=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if(movil&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:nombre});return;}catch(e){if(e&&e.name==='AbortError')return;}
+  }
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
 </script>
 
 </div><!-- /crm-app -->
