@@ -1088,9 +1088,11 @@ function saveVehiculo(){
     const idx=vehiculos.findIndex(x=>x.id===Number(idVal));
     if(idx>-1)vehiculos[idx]=v; else vehiculos.push(v);
   } else {vehiculos.push(v);}
+  const antes=idVal?load('vehiculos').find(x=>x.id===Number(idVal)):null;
   save('vehiculos',vehiculos);
   closeModal('modal-vehiculo');
   renderVehiculos();updateStats();
+  if(v.estado==='Vendido'&&(!antes||antes.estado!=='Vendido')){try{vendidaSinContratoAContabilidad(v);}catch(e){console.error(e);}}
 }
 
 // ══ RENDER VEHÍCULOS ══
@@ -1364,6 +1366,49 @@ function saveContrato(){
     delete document.getElementById('k-tipo').dataset.editId;
   } else {contratos.push(k);}
   save('contratos',contratos);closeModal('modal-contrato');renderContratos();updateStats();
+  try{ventaAContabilidad(k);}catch(e){console.error(e);}
+}
+// ── Cada venta entra sola en contabilidad ──
+function pedirEuros(msg,def){
+  const r=prompt(msg,def!=null&&def!==''?String(def):''); if(r===null)return null;
+  const n=numC(String(r).replace(/[^\d.,]/g,'')); return n>0?n:null;
+}
+function asegurarInicio(f){ // si la fecha es anterior al inicio de la contabilidad, lo adelanta para que cuente
+  if(f&&!enConta(f))setInicioConta(f.slice(0,8)+'01');
+}
+function ventaAContabilidad(k){
+  if(!k||!['venta','compra','deposito'].includes(k.tipo))return;
+  asegurarInicio(k.fecha);
+  syncContaContratos();
+  if(k.tipo!=='venta')return;
+  // marcar el vehículo como vendido
+  const N=x=>String(x||'').replace(/\s/g,'').toUpperCase();
+  const vs=load('vehiculos'), v=vs.find(x=>N(x.matricula)===N(k.matricula));
+  if(v&&v.estado!=='Vendido'){v.estado='Vendido';save('vehiculos',vs);}
+  // si no había contrato de compra/depósito, preguntar lo que costó
+  const ops=load('ops'), o=ops.find(x=>String(x.kVen)===String(k.id));
+  if(o&&o.revisar){
+    const c=pedirEuros(`Venta guardada: ${o.modelo} (${o.matricula}).\n\nNo hay contrato de compra ni de depósito de esta moto. ¿Cuánto os costó (o cuánto se paga al propietario)? Sin esto no se puede calcular el beneficio.`,'');
+    if(c!=null){o.precioCompra=c;o.revisar=false;o.manual=true;save('ops',ops);}
+  }
+  if(document.getElementById('page-contabilidad')?.classList.contains('active'))renderConta();
+}
+// Si marcas una moto como Vendida sin hacer contrato de venta, también entra en contabilidad
+function vendidaSinContratoAContabilidad(v){
+  const N=x=>String(x||'').replace(/\s/g,'').toUpperCase();
+  if(v.matricula&&load('contratos').some(k=>k.tipo==='venta'&&N(k.matricula)===N(v.matricula)))return;
+  syncContaContratos();
+  const ops=load('ops'); let o=v.matricula?ops.find(x=>N(x.matricula)===N(v.matricula)&&!x.fechaVenta):null;
+  const nombre=`${v.marca==='Otra'?'':v.marca+' '}${v.modelo}`.trim();
+  const pv=pedirEuros(`${nombre} marcada como vendida.\n\n¿Por cuánto se ha vendido? (deja vacío si vas a hacer el contrato de venta)`,v.precio);
+  if(pv==null)return;
+  let pc=o?o.precioCompra:0;
+  if(!o||!pc){const r=pedirEuros('¿Cuánto os costó la moto (o cuánto se paga al propietario)?','');if(r==null)return;pc=r;}
+  const hoy=hoyStr(); asegurarInicio(hoy);
+  if(o){o.fechaVenta=hoy;o.precioVenta=pv;o.precioCompra=pc;o.manual=true;}
+  else{o={id:String(Date.now())+'v',matricula:N(v.matricula),modelo:nombre,regimen:'rebu',fechaCompra:'',precioCompra:pc,fechaVenta:hoy,precioVenta:pv,notas:'Marcada como vendida sin contrato de venta.',manual:true};ops.push(o);}
+  save('ops',ops);
+  alert(`Añadida a contabilidad: ${nombre}, vendida por ${pv.toLocaleString('es-ES')} €.`);
 }
 
 function renderContratos(){
@@ -2259,7 +2304,7 @@ function renderConta(){
   if(!(currentUser && CONTA_USERS.includes(currentUser.user))){document.getElementById('page-contabilidad').innerHTML='<div class="empty"><div class="empty-text">No tienes acceso a la contabilidad.</div></div>';return;}
   syncContaContratos();
   const mes=mesSel(), r=resumenMes(mes), cfg=r.cfg, gastos=load('gastos'), ops=load('ops');
-  document.getElementById('conta-inicio-nota').innerHTML=(mes+'-31')<cfg.inicio?`<span style="color:var(--gold)">Este mes no cuenta: la contabilidad empieza el ${formatDate(cfg.inicio)}.</span> Lo que apuntes aquí se guarda pero no se suma. <button class="btn-outline btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button>`:`Contabilidad desde el ${formatDate(cfg.inicio)}.`;
+  document.getElementById('conta-inicio-nota').innerHTML=cfg.inicio>hoyStr()?`<span style="display:block;border:1px solid var(--gold);padding:0.8rem 1rem;color:var(--gold)">La contabilidad está configurada para empezar el ${formatDate(cfg.inicio)}: las ventas de ahora NO se suman. <button class="btn-primary btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button></span>`:(mes+'-31')<cfg.inicio?`<span style="color:var(--gold)">Este mes no cuenta: la contabilidad empieza el ${formatDate(cfg.inicio)}.</span> Lo que apuntes aquí se guarda pero no se suma. <button class="btn-outline btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button>`:`Contabilidad desde el ${formatDate(cfg.inicio)}.`;
   const S=(id,v)=>document.getElementById(id).innerHTML=v;
   S('cs-margen',eur(r.margen,0)); S('cs-margen-sub',`<b>${r.opsMes.length}</b> moto${r.opsMes.length===1?'':'s'} vendida${r.opsMes.length===1?'':'s'}`);
   S('cs-gastos',eur(r.gBase,0)); S('cs-gastos-sub',`<b>${r.gMes.length}</b> gasto${r.gMes.length===1?'':'s'} · IVA soportado ${eur(r.gIva,0)}`);
