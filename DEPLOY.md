@@ -27,11 +27,27 @@ Opcional (pestaña **Variables**): `FTP_SERVER_DIR` si la web no debe ir a
 carpeta del dominio, `public_html/` es lo correcto. Si entra en la raíz de
 la cuenta, usa `domains/velocebikes.es/public_html/`.
 
-### 3. Dominio
-En Hostinger, el dominio `velocebikes.es` debe apuntar al hosting
-(nameservers `ns1.dns-parking.com` / `ns2.dns-parking.com`, o registros A
-a la IP del hosting). Si antes apuntaba a GitHub Pages, quita esos
-registros (185.199.108–111.153) y desactiva GitHub Pages en
+### 3. Dominio (registrado en DonDominio)
+Primero, en hPanel añade `velocebikes.es` como sitio web/dominio del hosting.
+Después, en DonDominio elige **una** de estas dos opciones:
+
+**Opción A – Cambiar los DNS a Hostinger (la más sencilla)**
+DonDominio → Dominios → velocebikes.es → **Servidores DNS** → personalizados:
+- `ns1.dns-parking.com`
+- `ns2.dns-parking.com`
+
+Ojo: si tienes correo en DonDominio, dejará de funcionar salvo que vuelvas a crear
+los registros MX en Hostinger.
+
+**Opción B – Mantener los DNS en DonDominio (recomendada si usas correo allí)**
+DonDominio → Dominios → velocebikes.es → **Zona DNS**:
+- Borra los registros A de GitHub Pages (`185.199.108.153`, `.109.153`,
+  `.110.153`, `.111.153`) y el CNAME `www` → `velocebikes.github.io`.
+- Crea un registro **A** `@` → IP del hosting (hPanel → Detalles del plan / Información de la cuenta).
+- Crea un registro **CNAME** `www` → `velocebikes.es` (o un registro A `www` con la misma IP).
+
+La propagación tarda de minutos a 24-48 h. Después activa el **SSL gratuito**
+en hPanel → Seguridad → SSL, y desactiva GitHub Pages en
 **Settings → Pages** para no tener dos webs.
 
 ### 4. Primer despliegue
