@@ -400,7 +400,10 @@ textarea.f-input{resize:vertical;min-height:80px;}
   <div class="page" id="page-vehiculos">
     <div class="page-header">
       <div><div class="page-eyebrow">Inventario</div><h1 class="page-title">Vehí<em>culos</em></h1></div>
-      <button class="btn-primary" onclick="openModalVehiculo()">+ Añadir vehículo</button>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <button class="btn-outline btn-sm" onclick="publicarStockWeb()" title="Descarga stock.json para subirlo a GitHub">🌐 Publicar en la web</button>
+        <button class="btn-primary" onclick="openModalVehiculo()">+ Añadir vehículo</button>
+      </div>
     </div>
     <div class="table-wrap">
       <div class="table-toolbar">
@@ -603,6 +606,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
     </div>
     <div class="modal-body">
       <input type="hidden" id="v-id"/>
+      <button type="button" class="btn-outline btn-sm" onclick="escanearPermiso()" style="width:100%;justify-content:center;margin-bottom:1rem;padding:0.7rem">📷 Escanear permiso de circulación</button>
       <div class="form-grid">
         <div class="form-group"><label>Bastidor (VIN)</label><input class="f-input" id="v-bastidor" placeholder="WBS…"/></div>
         <div class="form-group"><label>Matrícula</label><input class="f-input" id="v-matricula" placeholder="0000 XXX"/></div>
@@ -686,6 +690,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
     <div class="modal-body">
       <p style="font-size:0.65rem;color:var(--muted);margin-bottom:1rem;"><span style="color:var(--red)">*</span> Campos obligatorios</p>
       <input type="hidden" id="c-id"/>
+      <button type="button" class="btn-outline btn-sm" onclick="escanearDNI('cliente')" style="width:100%;justify-content:center;margin-bottom:1rem;padding:0.7rem">📷 Escanear DNI</button>
       <div class="form-grid">
         <div class="form-group"><label>Nombre <span style="color:var(--red)">*</span></label><input class="f-input" id="c-nombre" placeholder="Juan"/></div>
         <div class="form-group"><label>Apellidos <span style="color:var(--red)">*</span></label><input class="f-input" id="c-apellidos" placeholder="García López"/></div>
@@ -731,6 +736,7 @@ textarea.f-input{resize:vertical;min-height:80px;}
           <label id="k-cliente-label">Propietario / Cliente</label>
           <div style="display:flex;gap:0.5rem;">
             <input class="f-input" id="k-dni" placeholder="Escribe para buscar…" oninput="autoCliente(this.value)" autocomplete="off" style="flex:1"/>
+            <button type="button" onclick="escanearDNI('contrato')" style="background:var(--surface);border:0.5px solid var(--border);color:var(--text,#f3f3f1);padding:0 0.9rem;cursor:pointer;font-size:0.8rem;white-space:nowrap" title="Escanear DNI">📷 DNI</button>
             <button type="button" onclick="limpiarCliente()" style="background:var(--surface);border:0.5px solid var(--border);color:var(--muted);padding:0 1rem;cursor:pointer;font-size:0.8rem;" title="Cambiar cliente">✕</button>
           </div>
           <div id="k-clientes-dropdown" style="display:none;background:var(--surface);border:0.5px solid var(--border-warm);max-height:180px;overflow-y:auto;"></div>
@@ -1062,6 +1068,18 @@ function openModalVehiculo(id=null){
   openModal('modal-vehiculo');
 }
 
+// ══ PUBLICAR STOCK EN LA WEB ══
+// Genera stock.json solo con las motos Visibles/Reservadas y sin datos internos (ni matrícula ni bastidor)
+async function publicarStockWeb(){
+  const pub=load('vehiculos').filter(v=>v.estado==='Visible'||v.estado==='Reservado').map(v=>({id:v.id,marca:v.marca,modelo:v.modelo,año:v.año,cv:v.cv,cc:v.cc,km:v.km,garantia:v.garantia,extras:v.extras,estado:v.estado,precio:v.precio,fotos:v.fotos||[]}));
+  const blob=new Blob([JSON.stringify({actualizado:new Date().toISOString(),vehiculos:pub})],{type:'application/json'});
+  const file=new File([blob],'stock.json',{type:'application/json'});
+  const movil=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if(movil&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'stock.json'});}catch(e){}}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='stock.json';document.body.appendChild(a);a.click();a.remove();}
+  alert(`stock.json listo con ${pub.length} motos.\n\nSúbelo a GitHub (Add file → Upload files) y en 1-2 minutos la web lo mostrará a todo el mundo.`);
+}
+
 // ══ GUARDAR VEHÍCULO ══
 function saveVehiculo(){
   const idVal=document.getElementById('v-id').value;
@@ -1245,7 +1263,7 @@ function selectCliente(id){
   document.getElementById('k-dni').value=`${c.nombre} ${c.apellidos} — ${c.dni}`;
   document.getElementById('k-nombre').value=c.nombre;
   document.getElementById('k-apellidos').value=c.apellidos;
-  document.getElementById('k-dir').value=`${c.direccion}, ${c.cp} ${c.ciudad}`;
+  document.getElementById('k-dir').value=[c.direccion,[c.cp,c.ciudad].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   document.getElementById('k-dni').dataset.dni=c.dni;
   if(c.iban)document.getElementById('k-iban').value=c.iban;
   document.getElementById('k-clientes-dropdown').style.display='none';
@@ -1277,6 +1295,7 @@ function selectVehiculo(id){
 
 function limpiarCliente(){
   ['k-dni','k-nombre','k-apellidos','k-dir'].forEach(id=>document.getElementById(id).value='');
+  ['k-nombre','k-apellidos','k-dir'].forEach(id=>document.getElementById(id).readOnly=true);
   delete document.getElementById('k-dni').dataset.dni;
   document.getElementById('k-clientes-dropdown').style.display='none';
 }
@@ -3184,5 +3203,371 @@ async function descargarContratoPDF(){
 </script>
 
 </div><!-- /crm-app -->
+<script>
+// ══ ESCANEAR DNI · lectura en el propio dispositivo (gratis, la foto no sale del móvil/ordenador) ══
+const OCR_CFG=window.OCR_CFG||{
+  js:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+  langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/spa@1.0.0/4.0.0_best_int'
+};
+let _ocrWorker=null,_ocrMsg=null;
+const _MRZ_CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<';
+const _DNI_L='TRWAGMYFPDXBNJZSQVHLCKE';
+const _CONF_L={'2':'Z','7':'ZT','5':'S','8':'B','6':'G','4':'A','1':'TIL','0':'DOQ','3':'E','Z':'Z'};
+const _CONF_N={'2':'87','8':'2306','0':'86','1':'74','7':'12','5':'68','6':'58','3':'8','9':'8','4':'1'};
+// Corrige una fecha del MRZ usando su dígito de control
+function _fixChk(f,d){
+  f=_aNum(f);d=_aNum(d||'');if(!/^\d{6}$/.test(f))return f;if(!/^\d$/.test(d)||_chk(f)===+d)return f;
+  for(let i=0;i<6;i++)for(const a of (_CONF_N[f[i]]||'')){const g=f.slice(0,i)+a+f.slice(i+1);if(_chk(g)===+d)return g;}
+  return f;
+}
+function _chk(s){const w=[7,3,1];let t=0;for(let i=0;i<s.length;i++){const c=s[i];t+=(c==='<'?0:/\d/.test(c)?+c:c.charCodeAt(0)-55)*w[i%3];}return t%10;}
+
+function _ocrAviso(t){
+  let d=document.getElementById('ocr-aviso');
+  if(!t){if(d)d.remove();return;}
+  if(!d){d=document.createElement('div');d.id='ocr-aviso';d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,9,8,.82);display:flex;align-items:center;justify-content:center;padding:1.5rem';
+    d.innerHTML='<div style="background:#16140f;border:0.5px solid #3a352e;padding:1.6rem 2rem;max-width:340px;text-align:center;color:#f3f3f1;font-size:.9rem;line-height:1.5"><div style="font-size:1.6rem;margin-bottom:.6rem">🪪</div><div id="ocr-aviso-t"></div><div style="font-size:.7rem;color:#8a8478;margin-top:.8rem">La foto se lee en este dispositivo. No se envía a ningún sitio.</div></div>';
+    document.body.appendChild(d);}
+  document.getElementById('ocr-aviso-t').textContent=t;
+}
+function _cargarScript(src){return new Promise((ok,ko)=>{if(window.Tesseract)return ok();const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el lector de DNI. Revisa la conexión a internet.'));document.head.appendChild(s);});}
+async function _ocrWorkerGet(){
+  if(_ocrWorker)return _ocrWorker;
+  await _cargarScript(OCR_CFG.js);
+  _ocrWorker=await Tesseract.createWorker('spa',1,{workerPath:OCR_CFG.workerPath,corePath:OCR_CFG.corePath,langPath:OCR_CFG.langPath,
+    logger:m=>{if(!_ocrMsg)return;if(m.status==='recognizing text')_ocrMsg('Leyendo el DNI… '+Math.round((m.progress||0)*100)+' %');else _ocrMsg('Preparando el lector… (la primera vez tarda un poco más)');}});
+  return _ocrWorker;
+}
+function _imgACanvas(file){return new Promise((ok,ko)=>{
+  const url=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{
+    let w=im.naturalWidth,h=im.naturalHeight;const m=Math.max(w,h);
+    const s=m>2200?2200/m:(m<1400?1400/m:1);w=Math.round(w*s);h=Math.round(h*s);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(im,0,0,w,h);
+    const d=x.getImageData(0,0,w,h),p=d.data;let mn=255,mx=0;
+    for(let i=0;i<p.length;i+=4){const g=p[i]*0.299+p[i+1]*0.587+p[i+2]*0.114;p[i]=g;if(g<mn)mn=g;if(g>mx)mx=g;}
+    const r=255/Math.max(1,mx-mn);for(let i=0;i<p.length;i+=4){const g=(p[i]-mn)*r;p[i]=p[i+1]=p[i+2]=g;}
+    x.putImageData(d,0,0);URL.revokeObjectURL(url);ok(c);};
+  im.onerror=()=>{URL.revokeObjectURL(url);ko(new Error('No se pudo abrir la imagen.'));};
+  im.src=url;});}
+function _girar(c,grados){const r=document.createElement('canvas');const v=grados%180!==0;r.width=v?c.height:c.width;r.height=v?c.width:c.height;const x=r.getContext('2d');x.translate(r.width/2,r.height/2);x.rotate(grados*Math.PI/180);x.drawImage(c,-c.width/2,-c.height/2);return r;}
+
+// ── utilidades de lectura ──
+const _aNum=s=>s.replace(/[OQDU]/g,'0').replace(/[IL]/g,'1').replace(/Z/g,'2').replace(/S/g,'5').replace(/B/g,'8').replace(/G/g,'6').replace(/T/g,'7').replace(/A/g,'4');
+function _dniValido(d){const m=d.match(/^([XYZ]?)(\d{7,8})([A-Z])$/);if(!m)return false;if(!m[1]&&m[2].length!==8)return false;const n=parseInt(({X:'0',Y:'1',Z:'2'}[m[1]]||'')+m[2],10);return _DNI_L[n%23]===m[3];}
+// Una ventana de 9 caracteres → DNI/NIE válido (admite letra confundida con cifra si conf=true)
+function _dniVentana(c,conf){
+  c=(c||'').toUpperCase().replace(/[^A-Z0-9<]/g,'');if(c.length<9)return '';c=c.slice(0,9);
+  const nie=/[XYZ]/.test(c[0]);const pre=nie?{X:'0',Y:'1',Z:'2'}[c[0]]:'';
+  const num=nie?_aNum(c.slice(1,8)):_aNum(c.slice(0,8));
+  if(!(nie?/^\d{7}$/:/^\d{8}$/).test(num))return '';
+  const base=(nie?c[0]:'')+num,L=_DNI_L[parseInt(pre+num,10)%23];
+  if(c[8]===L)return base+L;
+  if(conf&&(_CONF_L[c[8]]||'').includes(L))return base+L;
+  return '';
+}
+function _buscaDni(s){
+  s=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  for(let i=0;i+9<=s.length;i++){const c=s.substr(i,9);if((c.slice(0,8).match(/\d/g)||[]).length<6)continue;const d=_dniVentana(c,false);if(d)return d;}
+  return '';
+}
+const _sinAcentos=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'');
+function _fecha(yymmdd,futura){
+  const t=_aNum(yymmdd||'');if(!/^\d{6}$/.test(t))return '';
+  let yy=+t.slice(0,2);const mm=+t.slice(2,4),dd=+t.slice(4,6);if(mm<1||mm>12||dd<1||dd>31)return '';
+  const hoy=new Date().getFullYear()%100;
+  const y=futura?(yy>=70?1900+yy:2000+yy):(yy>hoy?1900+yy:2000+yy);
+  return `${y}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+}
+function _nombresMRZ(l){
+  l=l.replace(/[<KCLE]{3,}$/,'').replace(/<+$/,'');
+  let k=l.indexOf('<<');
+  if(k<0){const m=l.match(/KK|<K|K</);if(m)k=m.index;}
+  if(k<0)return {};
+  const ap=l.slice(0,k).split('<').filter(Boolean).join(' ');
+  const no=l.slice(k+2).replace(/^[<K]+/,'').split('<').filter(Boolean).join(' ');
+  return {apellidos:ap.replace(/[0-9]/g,''),nombre:no.replace(/[0-9]/g,'')};
+}
+function _parseMRZ(texto){
+  const ls=texto.split(/\n/).map(l=>l.toUpperCase().replace(/[«‹\(\[\{]/g,'<').replace(/[^A-Z0-9<]/g,'')).filter(l=>l.length>=15);
+  const r={};
+  const fechas=l=>{const m=l.match(/([0-9OIDQSZBGL]{6})([0-9OIDQSZBGL<])([MF<]?)([0-9OIDQSZBGL]{6})([0-9OIDQSZBGL<])/);if(m){r.nacimiento=_fecha(_fixChk(m[1],m[2]),false);const cad=_fixChk(m[4],m[5]);r.caducidad=cad.startsWith('99')?'permanente':_fecha(cad,true);}};
+  for(let i=0;i<ls.length;i++){
+    const l=ls[i];
+    // DNI / TIE (3 líneas de 30)
+    let j=l.search(/[I1][DR<][E][S5][P]/);
+    if(j>=0&&j<4){
+      const l1=l.slice(j);r.dni=_dniVentana(l1.substr(15,9),true)||_dniVentana(l1.substr(14,9),true)||_dniVentana(l1.substr(16,9),true)||_buscaDni(l1.slice(5))||r.dni;
+      const l2=ls[i+1]||'',l3=ls[i+2]||'';fechas(l2);
+      if(!r.dni)r.dni=_buscaDni(l2);
+      Object.assign(r,_nombresMRZ(l3));r.mrz=true;break;
+    }
+    // Pasaporte (2 líneas de 44)
+    j=l.search(/^P[A-Z<][E][S5][P]/);
+    if(j===0){Object.assign(r,_nombresMRZ(l.slice(5)));const l2=ls[i+1]||'';fechas(l2);r.dni=_dniVentana(l2.substr(28,9),true)||_buscaDni(l2.slice(20));r.mrz=true;break;}
+  }
+  // Si no hay cabecera clara, buscar una línea de nombres típica (APELLIDO<APELLIDO<<NOMBRE)
+  if(!r.mrz){for(const l of ls){if(/^[A-Z]+(<[A-Z]+)*<<[A-Z]+/.test(l)&&l.includes('<<')){Object.assign(r,_nombresMRZ(l));fechas(ls.join('\n'));break;}}}
+  return r;
+}
+function _parseTexto(texto){
+  const ls=texto.split(/\n/).map(l=>l.trim()).filter(Boolean),U=ls.map(l=>_sinAcentos(l.toUpperCase()));
+  const r={};
+  const mD=U.join(' ').match(/(?:DNI|NIF|NIE)[^A-Z0-9]{0,3}([0-9A-Z]{9})/);
+  r.dni=(mD&&_dniVentana(mD[1],true))||_buscaDni(ls.join(' ').replace(/\s/g,''))||'';
+  const esEti=u=>/(APELLIDO|SURNAME|NOMBRE|\bNAME\b|SEXO|NACIONALIDAD|NACIMIENTO|VALIDEZ|DOCUMENT|DNI|NUM|EMISION|SOPORTE|DOMICILIO|LUGAR|HIJO|EQUIPO|ESPANA|IDENTIDAD)/.test(u);
+  const soloLetras=s=>/^[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ \-']{1,40}$/i.test(s);
+  // Delante: apellidos y nombre
+  const ap=[];
+  U.forEach((u,i)=>{if(/APELLIDO|SURNAME/.test(u)){for(let k=i+1;k<Math.min(i+3,ls.length);k++){if(esEti(U[k]))break;if(soloLetras(ls[k]))ap.push(ls[k]);}}});
+  if(ap.length)r.apellidos=[...new Set(ap)].join(' ');
+  const iN=U.findIndex(u=>/^NOMBRE|\bNOMBRE\b|^NAME\b/.test(u)&&!/APELLIDO/.test(u));
+  if(iN>=0&&ls[iN+1]&&!esEti(U[iN+1])&&soloLetras(ls[iN+1]))r.nombre=ls[iN+1];
+  // Detrás: domicilio
+  const limpia=x=>x.replace(/[|_~]/g,'').replace(/^[^A-Z0-9ÁÉÍÓÚÑ]+/i,'').replace(/\s{2,}/g,' ').trim();
+  const fin=u=>/LUGAR|NACIMIENTO|HIJO|EQUIPO|IDESP|<</.test(u);
+  let iD=U.findIndex(u=>/DOMICILIO|MICILIO|DOMICI/.test(u)),dir=[];
+  if(iD>=0){
+    const resto=limpia(ls[iD].replace(/^.*(DOMICILIO|MICILIO|ILIO)\s*[:\/]?\s*(ADDRESS)?\s*/i,''));if(resto.length>3)dir.push(resto);
+    for(let k=iD+1;k<ls.length&&dir.length<3;k++){if(fin(U[k]))break;if(/[A-Z]{2,}/i.test(ls[k]))dir.push(limpia(ls[k]));}
+  }else{
+    // Sin la palabra DOMICILIO: las líneas justo antes de «LUGAR DE NACIMIENTO»
+    const iL=U.findIndex(u=>/LUGAR|NACIMIENTO/.test(u));
+    if(iL>0){for(let k=iL-1;k>=0&&dir.length<3;k--){if(/ILIO|DOMIC|ADDRESS|IDENTIDAD|ESPA/.test(U[k]))break;if(/[A-Z]{2,}.*|\d/.test(U[k])&&U[k].length>3)dir.unshift(limpia(ls[k]));}}
+  }
+  dir=dir.filter(x=>x.length>2);
+  if(dir.length){r.direccion=dir.join(', ');if(dir.length>=2)r.ciudad=dir[1];}
+  return r;
+}
+// Recupera tildes (GARCIA → GARCÍA) si la palabra aparece escrita en la parte delantera
+function _tildes(s,texto){
+  if(!s||!texto)return s;
+  const pal=(texto.toUpperCase().match(/[A-ZÁÉÍÓÚÜÑ]{2,}/g)||[]);const m={};pal.forEach(p=>{const k=_sinAcentos(p);if(k!==p)m[k]=p;});
+  return s.split(' ').map(w=>m[w]||w).join(' ');
+}
+
+async function _leerImagen(file){
+  const w=await _ocrWorkerGet();
+  let base=await _imgACanvas(file),mejor=null;
+  for(const g of [0,90,270,180]){
+    const c=g?_girar(base,g):base;
+    await w.setParameters({tessedit_pageseg_mode:'3',tessedit_char_whitelist:''});
+    const rec=(await w.recognize(c)).data,t=rec.text;
+    await w.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:_MRZ_CHARS});
+    const tm=(await w.recognize(c)).data.text;
+    const a=_parseMRZ(tm),b=_parseTexto(t);
+    const r={...b,...Object.fromEntries(Object.entries(a).filter(([k,v])=>v))};
+    r._texto=t;
+    const puntos=(r.dni?3:0)+(r.nombre?1:0)+(r.apellidos?1:0)+(r.direccion?1:0)+(r.mrz?2:0);
+    r._p=puntos;r._conf=rec.confidence||0;
+    if(!mejor||puntos>mejor._p||(puntos===mejor._p&&r._conf>mejor._conf))mejor=r;
+    if((r.dni&&(r.mrz||r.nombre))||r._conf>=70)break; // bien orientada, no hace falta girar
+  }
+  return mejor;
+}
+
+function escanearDNI(destino){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{
+    const fs=[...inp.files].slice(0,2);if(!fs.length)return;
+    _ocrMsg=_ocrAviso;_ocrAviso('Preparando el lector…');
+    try{
+      const res={};let textos='';
+      for(let i=0;i<fs.length;i++){
+        if(fs.length>1)_ocrAviso(`Leyendo foto ${i+1} de ${fs.length}…`);
+        const r=await _leerImagen(fs[i]);textos+='\n'+(r._texto||'');
+        for(const k of ['dni','nombre','apellidos','direccion','ciudad','nacimiento','caducidad'])if(r[k]&&!res[k])res[k]=r[k];
+        if(r.mrz){['dni','nombre','apellidos','nacimiento','caducidad'].forEach(k=>{if(r[k])res[k]=r[k];});}
+      }
+      _ocrAviso(null);_ocrMsg=null;
+      res.nombre=_tildes((res.nombre||'').toUpperCase().trim(),textos);
+      res.apellidos=_tildes((res.apellidos||'').toUpperCase().trim(),textos);
+      res.direccion=(res.direccion||'').toUpperCase().trim();res.ciudad=(res.ciudad||'').toUpperCase().trim();
+      if(!res.dni&&!res.nombre&&!res.apellidos){alert('No he podido leer el DNI.\n\nConsejos:\n· Haz la foto a la parte de ATRÁS (la de las líneas con <<<).\n· Con buena luz, sin brillos y que el DNI ocupe casi toda la foto.\n· Puedes elegir 2 fotos a la vez: delante y detrás.');return;}
+      _aplicarDNI(destino,res);
+    }catch(e){_ocrAviso(null);_ocrMsg=null;alert('Error al leer el DNI: '+(e.message||e));}
+  };
+  inp.click();
+}
+
+function _aplicarDNI(destino,r){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  const avisos=[];
+  if(r.caducidad&&r.caducidad!=='permanente'&&r.caducidad<new Date().toISOString().slice(0,10))avisos.push('⚠ DNI CADUCADO el '+r.caducidad.split('-').reverse().join('/')+'.');
+  if(r.dni&&!_dniValido(r.dni))avisos.push('⚠ La letra del DNI no cuadra, revísalo.');
+  if(!r.direccion)avisos.push('La dirección no se ha leído: haz también foto a la parte de atrás o escríbela.');
+  if(destino==='cliente'){
+    const dniEl=document.getElementById('c-dni');
+    if(r.dni&&!dniEl.readOnly){
+      const ex=load('clientes').find(c=>c.dni===r.dni&&String(c.id)!==document.getElementById('c-id').value);
+      if(ex){alert(`Este DNI ya está guardado: ${ex.nombre} ${ex.apellidos}.`);return;}
+      dniEl.value=r.dni;
+    }
+    set('c-nombre',r.nombre);set('c-apellidos',r.apellidos);set('c-direccion',r.direccion);
+    const ciu=document.getElementById('c-ciudad');if(ciu&&r.ciudad&&!ciu.value)ciu.value=r.ciudad;
+  }else{
+    const ex=r.dni&&load('clientes').find(c=>c.dni===r.dni);
+    if(ex){selectCliente(ex.id);avisos.unshift('Cliente ya guardado: '+ex.nombre+' '+ex.apellidos+'. Datos cargados.');}
+    else{
+      const f=document.getElementById('k-dni');
+      f.value=`${r.nombre||''} ${r.apellidos||''}`.trim()+(r.dni?' — '+r.dni:'');f.dataset.dni=r.dni||'';
+      set('k-nombre',r.nombre);set('k-apellidos',r.apellidos);set('k-dir',r.direccion);
+      ['k-nombre','k-apellidos','k-dir'].forEach(id=>document.getElementById(id).readOnly=false);
+      if(r.dni&&confirm('Cliente nuevo: '+(r.nombre||'')+' '+(r.apellidos||'')+' ('+r.dni+').\n\n¿Lo guardo también en Clientes? (Luego le añades el teléfono.)')){
+        const cs=load('clientes');cs.push({id:Date.now(),nombre:r.nombre||'',apellidos:r.apellidos||'',dni:r.dni,tlf:'',email:'',iban:'',direccion:r.direccion||'',cp:'',ciudad:r.ciudad||''});
+        save('clientes',cs);try{renderClientes();updateStats();}catch(e){}
+      }
+    }
+  }
+  const leido=[r.nombre&&'Nombre: '+r.nombre,r.apellidos&&'Apellidos: '+r.apellidos,r.dni&&'DNI: '+r.dni,r.direccion&&'Dirección: '+r.direccion,r.nacimiento&&'Nacimiento: '+r.nacimiento.split('-').reverse().join('/'),r.caducidad&&'Caducidad: '+(r.caducidad==='permanente'?'permanente':r.caducidad.split('-').reverse().join('/'))].filter(Boolean);
+  setTimeout(()=>alert('DNI leído ✔\n\n'+leido.join('\n')+(avisos.length?'\n\n'+avisos.join('\n'):'')+'\n\nRevisa que esté todo bien antes de guardar.'),50);
+}
+</script>
+<script>
+// ══ ESCANEAR PERMISO DE CIRCULACIÓN / FICHA TÉCNICA → ficha de la moto ══
+function _marcasCRM(){return [...document.querySelectorAll('#v-marca option')].map(o=>o.value||o.textContent).filter(m=>m&&m!=='Otra');}
+function _matricula(t){
+  const ls=_sinAcentos(t.toUpperCase()).split('\n');
+  // Primero la línea del campo A / «matrícula»
+  for(let i=0;i<ls.length;i++){if(/^\s*A[\s\.:]|MATRICULA(?!CION)/.test(ls[i])){const m=_matricula1(ls[i].replace(/^\s*A[\s\.:]+/,'')+'\n'+(ls[i+1]||''));if(m)return m;}}
+  return _matricula1(ls.join('\n'));
+}
+function _matricula1(t){
+  const U=t;
+  // Formato actual 1234 BCD (sin vocales, Ñ ni Q)
+  let m=U.match(/(?:^|[^0-9A-Z])([0-9OIZSBG]{4})[\s\-\.]?([BCDFGHJKLMNPRSTVWXYZ]{3})(?![A-Z0-9])/m);
+  if(m&&!['BMW','KTM','SWM','CVT','KMH','RPM'].includes(m[2])){const n=_aNum(m[1]);if(/^\d{4}$/.test(n))return n+m[2];}
+  // Ciclomotor C1234BCD y provincial antiguo M-1234-AB
+  m=U.match(/(?:^|[^0-9A-Z])C[\s\-]?(\d{4})[\s\-]?([BCDFGHJKLMNPRSTVWXYZ]{3})(?![A-Z0-9])/m);if(m)return 'C'+m[1]+m[2];
+  m=U.match(/(?:^|[^0-9A-Z])([A-Z]{1,2})[\s\-]?(\d{4})[\s\-]?([A-Z]{1,2})(?![A-Z0-9])/m);if(m&&/^(A|AB|AL|AV|B|BA|BI|BU|C|CA|CC|CE|CO|CR|CS|CU|GC|GE|GI|GR|GU|H|HU|IB|J|L|LE|LO|LU|M|MA|ML|MU|NA|O|OR|OU|P|PM|PO|S|SA|SE|SG|SO|SS|T|TE|TF|TO|V|VA|VI|Z|ZA)$/.test(m[1]))return m[1]+m[2]+m[3];
+  return '';
+}
+function _bastidor(t){
+  const ls=_sinAcentos(t.toUpperCase()).split('\n');
+  const ok=v=>/^[A-HJ-NPR-Z0-9]{17}$/.test(v)&&(v.slice(0,3).match(/[A-Z]/g)||[]).length>=2&&(v.slice(-6).match(/\d/g)||[]).length>=4;
+  const prueba=s=>{
+    // 1º palabras sueltas de 17 caracteres
+    for(const w of s.split(/\s+/)){const v=w.replace(/[^A-Z0-9]/g,'').replace(/O|Q/g,'0').replace(/I/g,'1');if(v.length===17&&ok(v))return v;}
+    s=s.replace(/[^A-Z0-9]/g,'');for(let i=0;i+17<=s.length;i++){let v=s.substr(i,17);
+    // En el VIN no existen I, O, Q
+    v=v.replace(/O|Q/g,'0').replace(/I/g,'1');
+    if(ok(v))return v;}return '';};
+  // Primero la línea del campo E / «número de identificación» / «bastidor»
+  for(let i=0;i<ls.length;i++){if(/^\s*E[\s\.:]|IDENTIFICACION|BASTIDOR|VIN\b/.test(ls[i])){const v=prueba(ls[i].replace(/^\s*E[\s\.:]+/,''))||prueba(ls[i+1]||'');if(v)return v;}}
+  for(const l of ls){const v=prueba(l);if(v)return v;}
+  return '';
+}
+// Valor de un campo del permiso por su código (D.1, D.3, P.1…): misma línea o la siguiente
+function _campo(ls,re){
+  const lab=/^(O RAZ[OÓ]N SOCIAL|MATR[IÍ]CULA|FECHA( DE)?( PRIMERA)? MATRICULACI[OÓ]N|APELLIDOS?( O RAZ[OÓ]N SOCIAL)?|NOMBRE|DOMICILIO|MARCA|TIPO( ?\/ ?VARIANTE)?( ?\/ ?VERSI[OÓ]N)?|DENOMINACI[OÓ]N COMERCIAL|N[UÚ]MERO DE IDENTIFICACI[OÓ]N|CILINDRADA( ?\(?CM3\)?)?|POTENCIA( NETA)?( M[AÁ]X(IMA|\.)?)?( ?\(?KW\)?)?|COMBUSTIBLE)[\s:\.]*/i;
+  for(let i=0;i<ls.length;i++){const m=ls[i].match(re);if(m){const r=ls[i].slice(m.index+m[0].length).replace(/^[\s:\.\-\/]+/,'').replace(lab,'').trim();if(r.length>=2&&!/^[A-Z]\.?\d?(\.\d)?\s*$/.test(r))return r;const n=(ls[i+1]||'').trim();if(n&&!re.test(n))return n;}}
+  return '';
+}
+function _campoNum(U,re){
+  for(let i=0;i<U.length;i++){const m=U[i].match(re);if(m){let r=U[i].slice(m.index+m[0].length).replace(/\([^)]*\)?/g,' ').replace(/\b(CM3|KW|CC)\b/g,' ');const n=r.match(/\d+(?:[,\.]\d+)?/);if(n)return n[0];const n2=(U[i+1]||'').match(/^\D{0,3}(\d+(?:[,\.]\d+)?)/);if(n2)return n2[1];}}
+  return '';
+}
+// Códigos oficiales del permiso (leyenda de la DGT): A matrícula · B 1ª matriculación · C.1.1 apellidos · C.1.2 nombre
+// D.1 marca · D.2 tipo · D.3 denominación comercial · E bastidor · P.1 cilindrada · P.2 potencia kW · P.3 combustible
+const _COD_RE=/(?:^|[\s|\[\(])([Cc][\.,]?[1lI][\.,]?[1-4lI]|[Cc][\.,]4|[D0O][\.,][1-4lI]|[D][1-4]|[Pp][\.,]?[1-3lI]|[Ff][\.,][12]|[Ss][\.,][12]|[I1!][\.,][12]|[ABEGHIKQ!])(?=[\s\)\]:|]|$)/g;
+function _normCod(c){if(c==='!')return 'I';c=c.toUpperCase().replace(/^[1!](?=[\.,])/,'I').replace(/,/g,'.').replace(/[LI](?=$|\.)/g,m=>m).replace(/^[0O]/,'D');
+  c=c.replace(/^([CDPFS])\.?([0-9LI])/,(m,a,b)=>a+'.'+b.replace(/[LI]/,'1')).replace(/^C\.1\.?([0-9LI])$/,(m,b)=>'C.1.'+b.replace(/[LI]/,'1'));return c;}
+function _codigos(t){
+  const ls=t.split('\n').map(l=>l.trim()).filter(Boolean),m={};
+  for(let i=0;i<ls.length;i++){
+    const l=ls[i],hits=[...l.matchAll(_COD_RE)];
+    hits.forEach((h,k)=>{
+      const cod=_normCod(h[1]),ini=h.index+h[0].length,fin=k+1<hits.length?hits[k+1].index:l.length;
+      let v=l.slice(ini,fin).replace(/^[\s:\.\)\]|]+/,'').replace(/[|\[\]]+$/,'').trim();
+      if(!v&&k===hits.length-1){const n=ls[i+1]||'';if(n&&!(_COD_RE.lastIndex=0,_COD_RE.test(n.slice(0,6))))v=n.trim();_COD_RE.lastIndex=0;}
+      if(v&&!m[cod])m[cod]=v;
+    });
+  }
+  return m;
+}
+function _parsePermiso(t){
+  const ls=t.split('\n').map(l=>l.trim()).filter(Boolean),U=ls.map(l=>_sinAcentos(l.toUpperCase()));
+  const r={};
+  // Si es la cara de la leyenda («Descripción de los códigos»), no hay datos que leer
+  if(/DESCRIPCION DE LOS CODIGOS/.test(U.join(' '))||U.filter(u=>/NUMERO DE MATRICULA|FECHA DE PRIMERA MATRICULACION|DENOMINACION COMERCIAL|NUMERO DE IDENTIFICACION/.test(u)).length>=3)return {leyenda:true};
+  const C=_codigos(t);r._cod=C;
+  r.matricula=(C['A']&&_matricula1(_sinAcentos(C['A'].toUpperCase())))||_matricula(t);
+  r.bastidor=(C['E']&&_bastidor(C['E']))||_bastidor(t);
+  // Marca: una de las del CRM que aparezca en el texto (preferiblemente en el campo D.1)
+  const marcas=_marcasCRM().sort((a,b)=>b.length-a.length),norm=s=>_sinAcentos(s.toUpperCase()).replace(/[^A-Z0-9]/g,'');
+  const d1=C['D.1']||_campo(U,/(^|\s)D[\.\s]?1(?![\d\.])|^MARCA\b/);
+  const enD1=marcas.find(m=>norm(d1).includes(norm(m)));
+  const alias={'BMWMOTORRAD':'BMW','BAYERISCHEMOTORENWERKE':'BMW','HARLEY':'Harley-Davidson','KTMSPORTMOTORCYCLE':'KTM','TRIUMPHMOTORCYCLES':'Triumph','MVAGUSTA':'MV Agusta','GASGAS':'Gas Gas','ROYALENFIELD':'Royal Enfield','MOTOGUZZI':'Moto Guzzi'};
+  const todo=norm(U.join(' '));
+  r.marca=enD1||Object.keys(alias).filter(k=>todo.includes(k)).map(k=>alias[k])[0]||marcas.find(m=>norm(m).length>=3&&new RegExp('(^|[^A-Z])'+_sinAcentos(m.toUpperCase()).replace(/[^A-Z0-9 ]/g,'.?')+'([^A-Z]|$)').test(U.join(' ')))||'';
+  // Modelo: D.3 denominación comercial (si no, D.2 tipo)
+  let mod=C['D.3']||_campo(ls,/DENOMINACI[OÓ]N\s+COMERCIAL/i)||_campo(ls,/(^|\s)[D0][\.\s]?3(?![\d\.])/);
+  mod=mod.replace(/DENOMINACI[OÓ]N\s+COMERCIAL[:\s]*/i,'').trim();
+  if(r.marca)mod=mod.replace(new RegExp('^'+r.marca.replace(/[^A-Za-z0-9]/g,'.?')+'\\s*','i'),'');
+  if(mod&&mod.length<=40&&/[A-Z0-9]/i.test(mod))r.modelo=mod.toUpperCase();
+  // Año: fecha de primera matriculación (campo B); si no, la fecha más antigua
+  const fB=C['B']||_campo(U,/(^|\s)B(?=[\s\.:]|$)|PRIMERA\s+MATRICULACION/);
+  const fecha=s=>{const m=(s||'').match(/(\d{2})[\/\.\-](\d{2})[\/\.\-](\d{4})/);return m&&+m[3]>1950&&+m[3]<=new Date().getFullYear()+1?m:null;};
+  let mf=fecha(fB);
+  if(!mf){const all=[...U.join(' ').matchAll(/(\d{2})[\/\.\-](\d{2})[\/\.\-](\d{4})/g)].filter(m=>+m[3]>1950&&+m[3]<=new Date().getFullYear()+1).sort((a,b)=>(a[3]+a[2]+a[1]).localeCompare(b[3]+b[2]+b[1]));mf=all[0];}
+  if(mf){r.año=mf[3];r.fmatric=`${mf[1]}/${mf[2]}/${mf[3]}`;}
+  // Cilindrada (P.1) y potencia (P.2 en kW → CV)
+  const num=s=>{const m=(s||'').replace(/(\d)[\.\s](\d{3})(?!\d)/g,'$1$2').match(/\d+(?:[,\.]\d+)?/);return m?parseFloat(m[0].replace(',','.')):0;};
+  let cc=num(C['P.1']||_campoNum(U,/CILINDRADA/)||_campo(U,/(^|\s)P[\.\s]?1(?![\d\.])/));
+  if(!(cc>=40&&cc<=3000)){const m=U.join(' ').match(/(\d{2,4})\s*(CM3|CC|C\.C\.)/);cc=m?+m[1]:0;}
+  if(cc>=40&&cc<=3000)r.cc=String(Math.round(cc));
+  let kw=num(C['P.2']||_campoNum(U,/POTENCIA/)||_campo(U,/(^|\s)P[\.\s]?2(?![\d\.])/));
+  if(!(kw>=2&&kw<=300)){const m=U.join(' ').match(/(\d{1,3}(?:[,\.]\d{1,2})?)\s*KW/);kw=m?parseFloat(m[1].replace(',','.')):0;}
+  if(kw>=2&&kw<=300)r.cv=String(Math.round(kw*1.35962));
+  // Titular (C.1.1 apellidos / razón social + C.1.2 nombre) — solo para el aviso
+  const ap=C['C.1.1']||_campo(ls,/APELLIDOS|(^|\s)C[\.\s]?1[\.\s]?1(?!\d)/i),no=C['C.1.2']||_campo(ls,/^NOMBRE\b|(^|\s)C[\.\s]?1[\.\s]?2(?!\d)/i);
+  const tit=[no,ap].filter(x=>x&&/^[A-ZÁÉÍÓÚÑ\s\.,\-]{3,}$/i.test(x)).join(' ').toUpperCase();if(tit)r.titular=tit;
+  return r;
+}
+async function _leerPermiso(file){
+  const w=await _ocrWorkerGet();const base=await _imgACanvas(file);let mejor=null;
+  for(const g of [0,90,270,180]){
+    const c=g?_girar(base,g):base;
+    await w.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''});
+    const d=(await w.recognize(c)).data;let t=d.text;let r=_parsePermiso(t);
+    if(!r.matricula||!r.bastidor||!r.modelo){await w.setParameters({tessedit_pageseg_mode:'3',tessedit_char_whitelist:''});const t2=(await w.recognize(c)).data.text;const r2=_parsePermiso(t2);for(const k in r2)if(r2[k]&&!r[k])r[k]=r2[k];}
+    const p=['matricula','bastidor','marca','modelo','año','cc','cv'].filter(k=>r[k]).length+(r.matricula?2:0)+(r.bastidor?2:0);
+    r._p=p;r._conf=d.confidence||0;
+    if(!mejor||p>mejor._p)mejor=r;
+    if((r.matricula&&r.bastidor)||r.leyenda||r._conf>=70)break;
+  }
+  return mejor||{};
+}
+function escanearPermiso(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{
+    const fs=[...inp.files].slice(0,2);if(!fs.length)return;
+    _ocrMsg=_ocrAviso;_ocrAviso('Preparando el lector…');
+    try{
+      const res={};
+      for(let i=0;i<fs.length;i++){if(fs.length>1)_ocrAviso(`Leyendo foto ${i+1} de ${fs.length}…`);const r=await _leerPermiso(fs[i]);for(const k in r)if(r[k]&&!res[k]&&k[0]!=='_')res[k]=r[k];}
+      _ocrAviso(null);_ocrMsg=null;
+      if(res.leyenda&&!res.matricula&&!res.bastidor){alert('Esa foto es la cara de la leyenda («Descripción de los códigos»).\n\nHaz la foto a la otra cara, la que tiene la matrícula, la marca y el bastidor.');return;}
+      if(!res.matricula&&!res.bastidor&&!res.marca){alert('No he podido leer el permiso.\n\nConsejos:\n· Foto de frente, con buena luz y sin brillos.\n· Que el documento ocupe casi toda la foto.\n· Puedes elegir 2 fotos: permiso de circulación y ficha técnica.');return;}
+      const vs=load('vehiculos'),idAct=document.getElementById('v-id').value;
+      const dup=vs.find(v=>String(v.id)!==idAct&&((res.matricula&&v.matricula&&v.matricula.replace(/[\s\-]/g,'').toUpperCase()===res.matricula)||(res.bastidor&&v.bastidor&&v.bastidor.toUpperCase()===res.bastidor)));
+      const set=(id,v,pisar)=>{const el=document.getElementById(id);if(el&&v&&(pisar||!el.value))el.value=v;};
+      set('v-matricula',res.matricula,true);set('v-bastidor',res.bastidor,true);
+      if(res.marca){const sel=document.getElementById('v-marca');sel.value=res.marca;if(sel.value!==res.marca)sel.value='';sel.dispatchEvent(new Event('change'));}
+      set('v-modelo',res.modelo);set('v-año',res.año);set('v-cc',res.cc);set('v-cv',res.cv);
+      const leido=[res.matricula&&'Matrícula: '+res.matricula,res.bastidor&&'Bastidor: '+res.bastidor,res.marca&&'Marca: '+res.marca,res.modelo&&'Modelo: '+res.modelo,res.fmatric&&'1ª matriculación: '+res.fmatric,res.cc&&'Cilindrada: '+res.cc+' cc',res.cv&&'Potencia: '+res.cv+' CV',res.titular&&'Titular: '+res.titular].filter(Boolean);
+      const avisos=[];
+      if(dup)avisos.push(`⚠ Ya tienes en el CRM una moto con esa matrícula o bastidor: ${dup.marca||''} ${dup.modelo||''}.`);
+      if(!res.bastidor)avisos.push('El bastidor no se ha leído: cópialo a mano.');
+      if(res.modelo)avisos.push('El modelo sale como figura en el permiso: ajústalo si quieres (p. ej. «M 1000 R»).');
+      if(res.titular)avisos.push('Comprueba que el titular es quien te vende la moto.');
+      alert('Permiso leído ✔\n\n'+leido.join('\n')+(avisos.length?'\n\n'+avisos.join('\n'):'')+'\n\nLos km no vienen en el permiso: añádelos tú. Revisa todo antes de guardar.');
+    }catch(e){_ocrAviso(null);_ocrMsg=null;alert('Error al leer el permiso: '+(e.message||e));}
+  };
+  inp.click();
+}
+</script>
 </body>
 </html>
