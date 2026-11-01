@@ -1,0 +1,37 @@
+name: Deploy a Hostinger
+
+# Se ejecuta en cada push a main y también manualmente desde la pestaña "Actions".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Evita dos despliegues a la vez: si llega otro push, se espera al anterior.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Subir la web por FTP a Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          # Carpeta de destino en el hosting (variable de repositorio opcional).
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+          # Solo sube los archivos que han cambiado desde el último despliegue.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            CNAME
+            DEPLOY.md
