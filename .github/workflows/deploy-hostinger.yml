@@ -59,3 +59,17 @@ jobs:
             .github/**
             CNAME
             DEPLOY.md
+
+      # Comprueba que Hostinger sirve la web y que el CRM conecta con la base
+      # de datos (aunque el dominio todavía no apunte a Hostinger).
+      - name: Comprobar la web en Hostinger
+        env:
+          IP: ${{ secrets.FTP_SERVER }}
+        run: |
+          R="--resolve velocebikes.es:80:$IP -sS -m 20"
+          echo "Página principal:"; curl $R http://velocebikes.es/ | grep -o '<title>[^<]*' || echo "  (no responde con la web)"
+          echo "CRM:"; curl $R -o /dev/null -w '  HTTP %{http_code}\n' http://velocebikes.es/crm.html
+          echo "API sin https (debe negarse):"; curl $R http://velocebikes.es/api/index.php?a=me; echo
+          echo "API + base de datos (debe decir usuario o contraseña incorrectos):"
+          curl $R -H 'X-Forwarded-Proto: https' -H 'X-CRM: 1' -H 'Content-Type: application/json' \
+            -d '{"user":"prueba-despliegue","pass":"x"}' http://velocebikes.es/api/index.php?a=login; echo
