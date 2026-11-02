@@ -18,6 +18,30 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
+      # Crea api/config.php con los datos de la base de datos. Este archivo
+      # no está en el repositorio: sale de los secrets de GitHub y solo
+      # existe en el servidor (y Hostinger no deja descargarlo).
+      - name: Crear la configuración del CRM
+        env:
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          CRM_INITIAL_PASSWORD: ${{ secrets.CRM_INITIAL_PASSWORD }}
+        run: |
+          if [ -z "$DB_NAME" ]; then
+            echo "::warning::Faltan los secrets de la base de datos: el CRM no funcionará en el servidor."
+            exit 0
+          fi
+          php -r '
+            $cfg = [
+              "dsn" => "mysql:host=localhost;dbname=" . getenv("DB_NAME") . ";charset=utf8mb4",
+              "db_user" => getenv("DB_USER"),
+              "db_pass" => getenv("DB_PASSWORD"),
+              "initial_password" => getenv("CRM_INITIAL_PASSWORD"),
+            ];
+            file_put_contents("api/config.php", "<?php\nreturn " . var_export($cfg, true) . ";\n");
+          '
+
       - name: Subir la web por FTP a Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:

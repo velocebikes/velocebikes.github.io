@@ -1,0 +1,5 @@
+# La configuración no se puede abrir desde internet.
+<Files "config.php">
+  Require all denied
+</Files>
+Options -Indexes

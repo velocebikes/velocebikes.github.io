@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080807"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <link rel="manifest" href="crm.webmanifest"/>
+<meta name="robots" content="noindex,nofollow"/>
+<script src="crm-sync.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -327,12 +329,14 @@ textarea.f-input{resize:vertical;min-height:80px;}
   <button class="menu-btn" id="menu-btn" onclick="toggleMenu()" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
   <div class="topbar-logo">Veloce<em>.</em>Bikes <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin-left:0.5rem;">CRM</span></div>
   <div class="topbar-right">
+    <span class="topbar-user" id="sync-status" title="Estado de guardado en el servidor"></span>
     <span class="topbar-user" id="topbar-user"></span>
     <button class="btn-logout" onclick="exportarBackup()">⬇ Backup</button>
     <button class="btn-logout" onclick="document.getElementById('import-file').click()">⬆ Restaurar</button>
     <button class="btn-logout" onclick="document.getElementById('merge-file').click()" title="Añade los datos de otro backup sin borrar los tuyos">⇄ Juntar</button>
     <input type="file" id="merge-file" accept=".json" style="display:none;" onchange="juntarBackup(event)">
     <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importarBackup(event)">
+    <button class="btn-logout" onclick="CRMSYNC.changePassword()">Contraseña</button>
     <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
   </div>
 </div>
@@ -846,49 +850,12 @@ textarea.f-input{resize:vertical;min-height:80px;}
 // ══ CONFIG CLOUDINARY ══
 const CLOUD = {name:'dsleoqcqf', preset:'velocebikes'};
 
-// ══ USUARIOS ══
-const USERS={julio:{pass:'Veloce11JCG',nombre:'Julio'},hugo:{pass:'Veloce11HCP',nombre:'Hugo'},empleado2:{pass:'VeloceBikes#E2',nombre:'Empleado 2'}};
-
-// ══ LOGIN OBLIGATORIO ══
+// ══ LOGIN ══
+// Usuarios y contraseñas los comprueba el servidor (api/index.php).
+// La sesión y la sincronización de datos están en crm-sync.js.
 let currentUser = null;
-
-function showLoginScreen(){
-  document.getElementById('crm-app').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-}
-
-function doLogin(){
-  const u = document.getElementById('ls-user').value.trim().toLowerCase();
-  const p = document.getElementById('ls-pass').value;
-  if(USERS[u] && USERS[u].pass === p){
-    currentUser = {user:u, ...USERS[u]};
-    sessionStorage.setItem('crm-user', u);
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('crm-app').style.display='block';
-    document.getElementById('topbar-user').textContent=currentUser.nombre;
-    document.getElementById('dash-name').textContent=currentUser.nombre;if(window.applyContaAccess)applyContaAccess();if(window.renderAvisos)renderAvisos();
-    document.getElementById('ls-error').style.display='none';
-  } else {
-    document.getElementById('ls-error').style.display='block';
-  }
-}
-
-function doLogout(){
-  sessionStorage.removeItem('crm-user');
-  window.location.href='index.html';
-}
-
-// Comprobar si ya hay sesión activa
-const savedUser = sessionStorage.getItem('crm-user');
-if(savedUser && USERS[savedUser]){
-  currentUser = {user:savedUser, ...USERS[savedUser]};
-  document.getElementById('crm-app').style.display='block';
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('topbar-user').textContent=currentUser.nombre;
-  document.getElementById('dash-name').textContent=currentUser.nombre;if(window.applyContaAccess)applyContaAccess();if(window.renderAvisos)renderAvisos();
-} else {
-  showLoginScreen();
-}
+function doLogin(){CRMSYNC.login();}
+function doLogout(){CRMSYNC.logout();}
 
 document.addEventListener('keydown', function(e){
   if(e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin();
@@ -969,7 +936,7 @@ function importarBackup(event){
       if(data.expedientes) localStorage.setItem('vcr_expedientes', JSON.stringify(data.expedientes));
       if(data.avisosDesde) localStorage.setItem('vcr_avisos_desde', data.avisosDesde);
       alert('Backup restaurado correctamente. La página se va a recargar.');
-      location.reload();
+      CRMSYNC.reload();
     }catch(err){
       alert('Error al leer el archivo de backup. Asegúrate de que es un archivo .json válido exportado desde este CRM.');
     }
@@ -2244,7 +2211,7 @@ function imprimirFactura(){
 <script>
 // ══ CONTABILIDAD ══
 const IVA_T=0.21;
-const CONTA_USERS=['julio','hugo']; // quién ve la contabilidad
+// Quién ve la contabilidad lo decide el servidor (currentUser.conta).
 const CONTA_DEF={yo:'Julio',socio:'Socio',is:15,isDesde:'2027-01-01',ret:19,inicio:'2027-01-01'};
 function enConta(f){return !!f && f>=contaCfg().inicio;}
 function setInicioConta(f){const c=contaCfg();c.inicio=f;localStorage.setItem('vcr_contacfg',JSON.stringify(c));}
@@ -2269,7 +2236,7 @@ function hoyISO(){return new Date().toISOString().slice(0,10);}
 function mesSel(){const el=document.getElementById('conta-mes');if(!el.value)el.value=hoyISO().slice(0,7);return el.value;}
 
 function applyContaAccess(){
-  const ok=currentUser && CONTA_USERS.includes(currentUser.user);
+  const ok=!!(currentUser && currentUser.conta);
   ['nav-conta','nav-sec-finanzas'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=ok?'':'none';});
 }
 
@@ -2320,7 +2287,7 @@ function ivaTrimestre(mes){
 // ── Render ──
 function renderConta(){
   applyContaAccess();
-  if(!(currentUser && CONTA_USERS.includes(currentUser.user))){document.getElementById('page-contabilidad').innerHTML='<div class="empty"><div class="empty-text">No tienes acceso a la contabilidad.</div></div>';return;}
+  if(!(currentUser && currentUser.conta)){document.getElementById('page-contabilidad').innerHTML='<div class="empty"><div class="empty-text">No tienes acceso a la contabilidad.</div></div>';return;}
   syncContaContratos();
   const mes=mesSel(), r=resumenMes(mes), cfg=r.cfg, gastos=load('gastos'), ops=load('ops');
   document.getElementById('conta-inicio-nota').innerHTML=cfg.inicio>hoyStr()?`<span style="display:block;border:1px solid var(--gold);padding:0.8rem 1rem;color:var(--gold)">La contabilidad está configurada para empezar el ${formatDate(cfg.inicio)}: las ventas de ahora NO se suman. <button class="btn-primary btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button></span>`:(mes+'-31')<cfg.inicio?`<span style="color:var(--gold)">Este mes no cuenta: la contabilidad empieza el ${formatDate(cfg.inicio)}.</span> Lo que apuntes aquí se guarda pero no se suma. <button class="btn-outline btn-sm" style="margin-left:0.5rem" onclick="empezarContaMes()">Empezar a contar desde este mes</button>`:`Contabilidad desde el ${formatDate(cfg.inicio)}.`;
@@ -2891,27 +2858,16 @@ if(currentUser) renderAvisos();
 <datalist id="dl-clientes"></datalist>
 <datalist id="dl-doc-titulos"><option>DNI</option><option>Permiso de circulación</option><option>Ficha técnica</option><option>Contrato de compra</option><option>Contrato de depósito</option><option>Contrato de venta</option><option>Contrato de reserva</option><option>Factura</option><option>Justificante de pago</option><option>Informe DGT</option><option>Impuesto de circulación</option><option>Solicitud de transferencia</option><option>Libro de mantenimiento</option></datalist>
 <script>
-// ══ DOCUMENTOS POR VEHÍCULO (se guardan en este ordenador, IndexedDB) ══
+// ══ DOCUMENTOS POR VEHÍCULO (se guardan en el servidor) ══
 const PARTES={vendedor:'Vendedor / propietario',comprador:'Comprador',vehiculo:'Vehículo'};
-const idbReq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
-const DOCDB={db:null,
-  open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{const r=indexedDB.open('veloce-docs',1);
-    r.onupgradeneeded=()=>{const s=r.result.createObjectStore('docs',{keyPath:'id'});s.createIndex('vehId','vehId');};
-    r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>rej(r.error);});},
-  async store(m){return (await this.open()).transaction('docs',m).objectStore('docs');},
-  async put(d){return idbReq((await this.store('readwrite')).put(d));},
-  async del(id){return idbReq((await this.store('readwrite')).delete(id));},
-  async get(id){return idbReq((await this.store('readonly')).get(id));},
-  async byVeh(v){return idbReq((await this.store('readonly')).index('vehId').getAll(String(v)));},
-  async all(){return idbReq((await this.store('readonly')).getAll());},
-  async clear(){return idbReq((await this.store('readwrite')).clear());}
-};
+// Los documentos se guardan en el servidor, fuera de la carpeta pública.
+const DOCDB=CRMSYNC.DOCDB;
 function docCount(vehId){try{return (JSON.parse(localStorage.getItem('vcr_doccount'))||{})[String(vehId)]||0;}catch{return 0;}}
 async function refreshDocCount(vehId){const n=(await DOCDB.byVeh(vehId)).length;const m=JSON.parse(localStorage.getItem('vcr_doccount')||'{}');m[String(vehId)]=n;localStorage.setItem('vcr_doccount',JSON.stringify(m));}
 function tam(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
 async function renderDocs(vehId){
   const el=document.getElementById('docs-list'); if(!el)return;
-  let docs=[]; try{docs=await DOCDB.byVeh(vehId);}catch(e){el.innerHTML='<p class="form-hint">Este navegador no permite guardar documentos.</p>';return;}
+  let docs=[]; try{docs=await DOCDB.byVeh(vehId);}catch(e){el.innerHTML='<p class="form-hint">No se han podido cargar los documentos. Revisa la conexión.</p>';return;}
   docs.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   el.innerHTML=Object.keys(PARTES).map(p=>{const ds=docs.filter(d=>d.parte===p);return `<div class="docs-grupo"><div class="docs-grupo-t">${PARTES[p]} (${ds.length})</div>
     ${ds.length?ds.map(d=>`<div class="doc-row"><div class="doc-info"><div>${eH(d.titulo)}</div><div class="doc-file">${eH(d.nombre)} · ${tam(d.size)} · ${formatDate(d.fecha)}</div></div>
@@ -2927,8 +2883,8 @@ async function subirDoc(){
   document.getElementById('doc-file').value='';document.getElementById('doc-titulo').value='';
   await refreshDocCount(vehId); renderDocs(vehId); try{renderVehiculos();}catch{}
 }
-async function verDoc(id){const d=await DOCDB.get(id);if(!d)return;const u=URL.createObjectURL(d.blob);window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000);}
-async function bajarDoc(id){const d=await DOCDB.get(id);if(!d)return;const a=document.createElement('a');a.href=URL.createObjectURL(d.blob);a.download=d.nombre;document.body.appendChild(a);a.click();a.remove();}
+function verDoc(id){window.open(CRMSYNC.docUrl(id),'_blank','noopener');}
+function bajarDoc(id){const a=document.createElement('a');a.href=CRMSYNC.docUrl(id,true);document.body.appendChild(a);a.click();a.remove();}
 async function borrarDoc(id,vehId){if(!confirm('¿Borrar este documento? No se puede deshacer.'))return;await DOCDB.del(id);await refreshDocCount(vehId);renderDocs(vehId);try{renderVehiculos();}catch{}}
 
 // Backup con documentos
@@ -2954,7 +2910,7 @@ function importarBackup(event){
     if(Array.isArray(data.documentos)){try{await DOCDB.clear();const cnt={};
       for(const d of data.documentos){const blob=await (await fetch(d.data)).blob();const {data:_,...meta}=d;await DOCDB.put({...meta,blob});cnt[d.vehId]=(cnt[d.vehId]||0)+1;}
       localStorage.setItem('vcr_doccount',JSON.stringify(cnt));}catch(err){alert('Los datos se han restaurado, pero no se pudieron recuperar los documentos.');}}
-    alert('Backup restaurado. La página se va a recargar.'); location.reload();
+    alert('Backup restaurado. La página se va a recargar.'); await CRMSYNC.reload();
   };
   reader.readAsText(file);
 }
@@ -2995,10 +2951,11 @@ function juntarBackup(event){
       localStorage.setItem('vcr_expedientes',JSON.stringify(cur)); if(n)res.push(`${n} expedientes`);}
     // Documentos
     if(Array.isArray(data.documentos)){try{let n=0;
-      for(const d of data.documentos){if(await DOCDB.get(d.id))continue;const blob=await (await fetch(d.data)).blob();const {data:_,...meta}=d;await DOCDB.put({...meta,blob});n++;}
-      const cnt={};(await DOCDB.all()).forEach(d=>cnt[d.vehId]=(cnt[d.vehId]||0)+1);localStorage.setItem('vcr_doccount',JSON.stringify(cnt));
+      const yaHay=new Set((await DOCDB.list()).map(x=>x.id));
+      for(const d of data.documentos){if(yaHay.has(d.id))continue;const blob=await (await fetch(d.data)).blob();const {data:_,...meta}=d;await DOCDB.put({...meta,blob});n++;}
+      const cnt={};(await DOCDB.list()).forEach(d=>cnt[d.vehId]=(cnt[d.vehId]||0)+1);localStorage.setItem('vcr_doccount',JSON.stringify(cnt));
       if(n)res.push(`${n} documentos`);}catch(err){res.push('(no se pudieron juntar los documentos)');}}
-    alert(res.length?`Juntado. Se han añadido: ${res.join(', ')}.\n\nLa página se va a recargar.`:'No había nada nuevo en ese backup: ya tenías todo.'); if(res.length)location.reload();
+    alert(res.length?`Juntado. Se han añadido: ${res.join(', ')}.\n\nLa página se va a recargar.`:'No había nada nuevo en ese backup: ya tenías todo.'); if(res.length)await CRMSYNC.reload();
   };
   reader.readAsText(file);
 }
@@ -3569,5 +3526,6 @@ function escanearPermiso(){
   inp.click();
 }
 </script>
+<script>CRMSYNC.init();</script>
 </body>
 </html>
