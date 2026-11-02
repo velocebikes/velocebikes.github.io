@@ -70,6 +70,8 @@ jobs:
           get() { curl --resolve velocebikes.es:80:$IP -sS -m 20 "$@"; }
           title() { grep -o '<title>[^<]*' | head -1 | sed 's/<title>//'; }
           echo "Página principal:  $(get http://velocebikes.es/ | title)"
+          echo "Con https:         $(curl --resolve velocebikes.es:443:$IP -ksS -m 20 https://velocebikes.es/ | title)"
+          echo "Con www:           $(curl --resolve www.velocebikes.es:80:$IP -sS -m 20 http://www.velocebikes.es/ | title)"
           echo "CRM:               $(get http://velocebikes.es/crm.html | title)"
           echo "API sin https:     $(get http://velocebikes.es/api/index.php?a=me | head -c 200)"
           echo "API + base datos:  $(get -H 'X-Forwarded-Proto: https' -H 'X-CRM: 1' -H 'Content-Type: application/json' \
