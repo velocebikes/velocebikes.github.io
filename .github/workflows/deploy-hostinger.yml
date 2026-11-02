@@ -27,7 +27,7 @@ jobs:
           protocol: ftps
           port: 21
           # Carpeta de destino en el hosting (variable de repositorio opcional).
-          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'domains/velocebikes.es/public_html/' }}
           # Solo sube los archivos que han cambiado desde el último despliegue.
           exclude: |
             **/.git*
