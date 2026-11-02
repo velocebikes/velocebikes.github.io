@@ -22,10 +22,10 @@ Repositorio → **Settings → Secrets and variables → Actions → New reposit
 | `FTP_USERNAME`  | Usuario FTP           |
 | `FTP_PASSWORD`  | Contraseña FTP        |
 
-Opcional (pestaña **Variables**): `FTP_SERVER_DIR` si la web no debe ir a
-`public_html/` (por defecto). Si tu usuario FTP entra directamente en la
-carpeta del dominio, `public_html/` es lo correcto. Si entra en la raíz de
-la cuenta, usa `domains/velocebikes.es/public_html/`.
+La web se sube a `domains/velocebikes.es/public_html/`, que es la carpeta
+real del sitio en Hostinger (el usuario FTP principal entra en la raíz de la
+cuenta). Para cambiarla sin tocar el workflow, crea la variable
+`FTP_SERVER_DIR` en la pestaña **Variables**.
 
 ### 3. Dominio (registrado en DonDominio)
 Primero, en hPanel añade `velocebikes.es` como sitio web/dominio del hosting.
