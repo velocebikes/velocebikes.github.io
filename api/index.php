@@ -224,6 +224,32 @@ if (empty($CFG['allow_insecure']) && !is_https()) {
 // formulario de otra web no puede enviar.
 if ($method !== 'GET' && ($_SERVER['HTTP_X_CRM'] ?? '') !== '1') fail('Petición no permitida.', 403);
 
+// Stock público para la web: solo motos Visibles/Reservadas y solo datos
+// públicos (sin matrícula, bastidor, costes ni nada de clientes).
+if ($action === 'stock' && $method === 'GET') {
+    try {
+        $st = db()->prepare('SELECT v FROM crm_kv WHERE k = ?');
+        $st->execute(['vcr_vehiculos']);
+        $all = json_decode((string)$st->fetchColumn(), true) ?: [];
+        $pub = [];
+        foreach ($all as $v) {
+            if (!is_array($v) || !in_array($v['estado'] ?? '', ['Visible', 'Reservado'], true)) continue;
+            $fotos = array_values(array_filter((array)($v['fotos'] ?? []), fn($f) => is_string($f) && preg_match('#^https://#', $f)));
+            $pub[] = [
+                'id' => $v['id'] ?? null, 'marca' => (string)($v['marca'] ?? ''), 'modelo' => (string)($v['modelo'] ?? ''),
+                'año' => $v['año'] ?? '', 'cv' => $v['cv'] ?? '', 'cc' => $v['cc'] ?? '', 'km' => $v['km'] ?? '',
+                'garantia' => $v['garantia'] ?? '', 'extras' => (string)($v['extras'] ?? ''), 'estado' => $v['estado'],
+                'precio' => $v['precio'] ?? '', 'fotos' => $fotos,
+            ];
+        }
+        header('Cache-Control: public, max-age=60', true);
+        out(['vehiculos' => $pub]);
+    } catch (Throwable $e) {
+        error_log('CRM API stock: ' . $e->getMessage());
+        fail('Error del servidor.', 500);
+    }
+}
+
 try {
     start_session();
 
