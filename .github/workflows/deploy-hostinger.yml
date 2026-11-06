@@ -42,18 +42,6 @@ jobs:
             file_put_contents("api/config.php", "<?php\nreturn " . var_export($cfg, true) . ";\n");
           '
 
-      # Diagnóstico temporal: qué carpetas ve el usuario FTP.
-      - name: Ver carpetas del FTP
-        env:
-          H: ${{ secrets.FTP_SERVER }}
-          U: ${{ secrets.FTP_USERNAME }}
-          P: ${{ secrets.FTP_PASSWORD }}
-        run: |
-          for d in "" "public_html/" "domains/" "domains/velocebikes.es/" "domains/velocebikes.es/public_html/"; do
-            echo "== /$d"; curl -sS -m 20 --ssl-reqd --list-only -u "$U:$P" "ftp://$H/$d" 2>&1 | head -40 || true
-          done
-          echo "== pwd"; curl -sS -m 20 --ssl-reqd -u "$U:$P" -Q PWD "ftp://$H/" -o /dev/null -v 2>&1 | grep -i '257' || true
-
       - name: Subir la web por FTP a Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
