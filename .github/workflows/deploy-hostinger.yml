@@ -50,11 +50,11 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          # Carpeta de destino: el usuario FTP entra en la carpeta del sitio,
-          # así que public_html/ es la carpeta pública de velocebikes.es.
-          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
-          # Archivo donde la acción recuerda qué hay subido. Nombre nuevo para
-          # que vuelva a subirlo todo (la carpeta anterior no era la buena).
+          # Carpeta pública de velocebikes.es. Va con ruta absoluta porque el
+          # usuario FTP empieza en /home/u761802150/public_html, que NO es la
+          # carpeta de la web (esa es /home/u761802150/domains/velocebikes.es/public_html).
+          server-dir: ${{ vars.FTP_SERVER_DIR || '/domains/velocebikes.es/public_html/' }}
+          # Archivo donde la acción recuerda qué hay subido.
           state-name: .ftp-deploy-state-v2.json
           # Solo sube los archivos que han cambiado desde el último despliegue.
           exclude: |

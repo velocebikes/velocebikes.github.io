@@ -22,9 +22,10 @@ Repositorio → **Settings → Secrets and variables → Actions → New reposit
 | `FTP_USERNAME`  | Usuario FTP           |
 | `FTP_PASSWORD`  | Contraseña FTP        |
 
-La web se sube a `public_html/` dentro de la carpeta del usuario FTP, que es
-la carpeta pública de velocebikes.es en Hostinger
-(`/home/u761802150/domains/velocebikes.es/public_html`). Para cambiarla sin tocar el workflow, crea la variable
+La web se sube a `/domains/velocebikes.es/public_html/` (ruta absoluta en el
+FTP), que es `/home/u761802150/domains/velocebikes.es/public_html`. Ojo: al
+conectarse, el usuario FTP empieza en `/home/u761802150/public_html`, que no
+es la carpeta de la web. Para cambiar el destino sin tocar el workflow, crea la variable
 `FTP_SERVER_DIR` en la pestaña **Variables**.
 
 ### 3. Dominio (registrado en DonDominio)
