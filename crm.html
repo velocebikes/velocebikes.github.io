@@ -1114,6 +1114,7 @@ function renderVehiculos(){
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn-outline btn-sm" onclick="openModalVehiculo(${v.id})">Editar</button>
         <button class="btn-outline btn-sm" onclick="openExp(${v.id})">Expediente</button>
+        <button class="btn-outline btn-sm" onclick="openDesp(${v.id})">Desperfectos</button>
         <button class="btn-outline btn-sm" onclick="generarCartel(${v.id})" style="color:var(--gold);border-color:var(--gold);">🖨 Cartel</button>
         <button class="btn-danger" onclick="deleteVehiculo(${v.id})">Eliminar</button>
       </td>
@@ -2875,7 +2876,7 @@ const PARTES={vendedor:'Vendedor / propietario',comprador:'Comprador',vehiculo:'
 // Los documentos se guardan en el servidor, fuera de la carpeta pública.
 const DOCDB=CRMSYNC.DOCDB;
 function docCount(vehId){try{return (JSON.parse(localStorage.getItem('vcr_doccount'))||{})[String(vehId)]||0;}catch{return 0;}}
-async function refreshDocCount(vehId){const n=(await DOCDB.byVeh(vehId)).length;const m=JSON.parse(localStorage.getItem('vcr_doccount')||'{}');m[String(vehId)]=n;localStorage.setItem('vcr_doccount',JSON.stringify(m));}
+async function refreshDocCount(vehId){const n=(await DOCDB.byVeh(vehId)).filter(d=>d.parte!=='desperfecto').length;const m=JSON.parse(localStorage.getItem('vcr_doccount')||'{}');m[String(vehId)]=n;localStorage.setItem('vcr_doccount',JSON.stringify(m));}
 function tam(b){return b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
 async function renderDocs(vehId){
   const el=document.getElementById('docs-list'); if(!el)return;
@@ -3536,6 +3537,194 @@ function escanearPermiso(){
     }catch(e){_ocrAviso(null);_ocrMsg=null;alert('Error al leer el permiso: '+(e.message||e));}
   };
   inp.click();
+}
+</script>
+<!-- ══ MODAL DESPERFECTOS ══ -->
+<div class="modal-bg" id="modal-desp">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-header"><div class="modal-title" id="desp-title">Desperfectos</div><button class="modal-close" onclick="closeModal('modal-desp')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="desp-veh"/>
+      <p class="form-hint" style="margin:0 0 1rem;">Hasta 6 fotos. La plantilla se adapta sola: con una foto, una grande; con más, en cuadrícula. Las fotos se guardan en el servidor, no son públicas.</p>
+      <div id="desp-lista" class="desp-lista"></div>
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-top:1rem;">
+        <label class="btn-outline btn-sm" id="desp-add-btn" style="cursor:pointer;">＋ Añadir fotos<input type="file" id="desp-file" accept="image/*" multiple style="display:none" onchange="despAnadir(this.files)"/></label>
+        <span class="form-hint" id="desp-prog"></span>
+      </div>
+      <div class="form-group" style="margin-top:1.2rem;"><label>Observaciones (opcional)</label><textarea class="f-input" id="desp-obs" style="min-height:60px;" placeholder="Estado general, lo que se ha revisado…" oninput="despGuardarPronto()"></textarea></div>
+      <div class="foto-section">
+        <div class="foto-section-title">Vista previa</div>
+        <div id="desp-preview" class="desp-preview"><p class="form-hint">Añade alguna foto para ver la plantilla.</p></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline btn-sm" onclick="closeModal('modal-desp')">Cerrar</button>
+      <button class="btn-outline btn-sm" onclick="despDescargar('jpg')">⬇ Imagen</button>
+      <button class="btn-primary btn-sm" onclick="despDescargar('pdf')">⬇ PDF</button>
+    </div>
+  </div>
+</div>
+<style>
+.desp-lista{display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;}
+.desp-item{border:0.5px solid var(--border);background:var(--card2);padding:0.5rem;display:flex;flex-direction:column;gap:0.4rem;}
+.desp-item img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#000;}
+.desp-item .desp-num{font-family:var(--font-serif);color:var(--gold);font-size:1rem;}
+.desp-item textarea{min-height:44px;font-size:0.75rem;}
+.desp-acc{display:flex;gap:0.3rem;justify-content:space-between;align-items:center;}
+.desp-acc button{background:none;border:0.5px solid var(--border);color:var(--muted);padding:0.15rem 0.5rem;cursor:pointer;font-size:0.7rem;}
+.desp-preview img{width:100%;max-width:420px;display:block;margin:0 auto;border:0.5px solid var(--border);}
+@media(max-width:768px){.desp-lista{grid-template-columns:repeat(2,1fr);}}
+</style>
+<script>
+// ══ DESPERFECTOS POR MOTO ══
+// Datos: vcr_desperfectos = {vehId:{fotos:[{id,nota}],obs}} (se sincroniza con el servidor).
+// Las fotos se guardan como documentos privados del vehículo (parte "desperfecto").
+const DESP_MAX=6;
+function despTodos(){try{return JSON.parse(localStorage.getItem('vcr_desperfectos'))||{};}catch{return{};}}
+function despDe(id){const d=despTodos()[String(id)]||{};return {fotos:Array.isArray(d.fotos)?d.fotos:[],obs:d.obs||''};}
+function despGuardar(id,d){const all=despTodos();all[String(id)]=d;localStorage.setItem('vcr_desperfectos',JSON.stringify(all));}
+function despVeh(){return load('vehiculos').find(x=>String(x.id)===String(document.getElementById('desp-veh').value));}
+
+function openDesp(id){
+  const v=load('vehiculos').find(x=>String(x.id)===String(id)); if(!v)return;
+  document.getElementById('desp-veh').value=v.id;
+  document.getElementById('desp-title').innerHTML=`Desperfectos <em style="font-style:italic;color:var(--gold)">${eH(v.marca==='Otra'?'':v.marca)} ${eH(v.modelo)}</em>`;
+  document.getElementById('desp-obs').value=despDe(v.id).obs;
+  document.getElementById('desp-prog').textContent='';
+  openModal('modal-desp'); despPintar();
+}
+function despPintar(){
+  const v=despVeh(); if(!v)return; const d=despDe(v.id);
+  document.getElementById('desp-lista').innerHTML=d.fotos.map((f,i)=>`<div class="desp-item">
+    <img src="${CRMSYNC.docUrl(f.id)}" alt="Desperfecto ${i+1}" loading="lazy"/>
+    <div class="desp-acc"><span class="desp-num">${String(i+1).padStart(2,'0')}</span>
+      <span><button title="Mover antes" onclick="despMover(${i},-1)" ${i===0?'disabled':''}>◀</button><button title="Mover después" onclick="despMover(${i},1)" ${i===d.fotos.length-1?'disabled':''}>▶</button><button title="Quitar" onclick="despQuitar(${i})">✕</button></span></div>
+    <textarea class="f-input" placeholder="Qué se ve (opcional): arañazo en el depósito…" oninput="despNota(${i},this.value)">${eH(f.nota||'')}</textarea>
+  </div>`).join('');
+  const lleno=d.fotos.length>=DESP_MAX;
+  document.getElementById('desp-add-btn').style.display=lleno?'none':'';
+  if(lleno)document.getElementById('desp-prog').textContent='Ya tienes las 6 fotos.';
+  despPreviewPronto();
+}
+let despTimer=null, despPrevTimer=null;
+function despGuardarPronto(){clearTimeout(despTimer);despTimer=setTimeout(()=>{const v=despVeh();if(!v)return;const d=despDe(v.id);d.obs=document.getElementById('desp-obs').value;despGuardar(v.id,d);despPreviewPronto();},500);}
+function despNota(i,txt){clearTimeout(despTimer);despTimer=setTimeout(()=>{const v=despVeh();if(!v)return;const d=despDe(v.id);if(!d.fotos[i])return;d.fotos[i].nota=txt;despGuardar(v.id,d);despPreviewPronto();},500);}
+function despMover(i,dir){const v=despVeh();const d=despDe(v.id);const j=i+dir;if(j<0||j>=d.fotos.length)return;[d.fotos[i],d.fotos[j]]=[d.fotos[j],d.fotos[i]];despGuardar(v.id,d);despPintar();}
+async function despQuitar(i){
+  if(!confirm('¿Quitar esta foto de los desperfectos?'))return;
+  const v=despVeh();const d=despDe(v.id);const f=d.fotos.splice(i,1)[0];despGuardar(v.id,d);despPintar();
+  try{await DOCDB.del(f.id);}catch(e){console.error(e);}
+}
+async function despAnadir(files){
+  const v=despVeh(); if(!v)return; files=Array.from(files||[]); document.getElementById('desp-file').value='';
+  const libres=DESP_MAX-despDe(v.id).fotos.length;
+  if(files.length>libres){alert(`Solo caben ${DESP_MAX} fotos. Se añadirán las ${libres} primeras.`);files=files.slice(0,libres);}
+  const prog=document.getElementById('desp-prog'); let n=0, mal=0;
+  for(const file of files){
+    prog.textContent=`Subiendo ${n+1} de ${files.length}…`;
+    try{
+      const f=(window.reducirFoto?await reducirFoto(file):file);
+      const id='d'+Date.now()+Math.random().toString(36).slice(2,6);
+      await DOCDB.put({id,vehId:String(v.id),parte:'desperfecto',titulo:'Desperfecto',nombre:f.name,tipo:f.type,size:f.size,fecha:hoyStr(),blob:f});
+      const d=despDe(v.id); d.fotos.push({id,nota:''}); despGuardar(v.id,d); n++;
+      despPintar();
+    }catch(e){console.error(e);mal++;}
+  }
+  prog.textContent=mal?`${n} subida${n!==1?'s':''}, ${mal} con error.`:`✓ ${n} foto${n!==1?'s':''} añadida${n!==1?'s':''}.`;
+}
+
+// ── Plantilla (A4, tipografía de la web: Cormorant Garamond + Jost) ──
+const DESP_C={fondo:'#F3F3F1',tinta:'#0A0908',gris:'#5F646B',linea:'#C6C9CE',oro:'#C8AA6E'};
+function despCargarImg(url){return fetch(url,{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('foto');return r.blob();}).then(b=>createImageBitmap(b,{imageOrientation:'from-image'}));}
+function despEspaciado(ctx,txt,x,y,esp,align){
+  const w=[...txt].reduce((s,ch)=>s+ctx.measureText(ch).width+esp,0)-esp;
+  let cx=align==='right'?x-w:align==='center'?x-w/2:x;
+  for(const ch of txt){ctx.fillText(ch,cx,y);cx+=ctx.measureText(ch).width+esp;}
+  return w;
+}
+function despLineas(ctx,txt,maxW,maxL){
+  const out=[];let l='';
+  for(const w of String(txt||'').split(/\s+/).filter(Boolean)){const t=l?l+' '+w:w;if(ctx.measureText(t).width>maxW&&l){out.push(l);l=w;}else l=t;}
+  if(l)out.push(l);
+  if(out.length>maxL){out.length=maxL;let u=out[maxL-1];while(u&&ctx.measureText(u+'…').width>maxW)u=u.slice(0,-1);out[maxL-1]=u+'…';}
+  return out;
+}
+function despCeldas(n,x,y,w,h,g){
+  const fila=(cy,ch,cols)=>Array.from({length:cols},(_,i)=>({x:x+i*((w-g*(cols-1))/cols+g),y:cy,w:(w-g*(cols-1))/cols,h:ch}));
+  if(n===1)return fila(y,h,1);
+  if(n===2){const ch=(h-g)/2;return [...fila(y,ch,1),...fila(y+ch+g,ch,1)];}
+  if(n===3){const ch=(h-g)/2;return [...fila(y,ch,1),...fila(y+ch+g,ch,2)];}
+  if(n===4){const ch=(h-g)/2;return [...fila(y,ch,2),...fila(y+ch+g,ch,2)];}
+  if(n===5){const ch=(h-2*g)/3;return [...fila(y,ch,1),...fila(y+ch+g,ch,2),...fila(y+2*(ch+g),ch,2)];}
+  const ch=(h-2*g)/3;return [...fila(y,ch,2),...fila(y+ch+g,ch,2),...fila(y+2*(ch+g),ch,2)];
+}
+async function despLienzo(v){
+  const d=despDe(v.id); if(!d.fotos.length)throw new Error('Añade al menos una foto.');
+  try{await Promise.all(['300 80px "Cormorant Garamond"','400 80px "Cormorant Garamond"','italic 300 80px "Cormorant Garamond"','300 30px Jost','400 30px Jost','500 30px Jost'].map(f=>document.fonts.load(f)));}catch(e){}
+  const imgs=await Promise.all(d.fotos.map(f=>despCargarImg(CRMSYNC.docUrl(f.id)).catch(()=>null)));
+  const W=1654,H=2339,M=120, c=document.createElement('canvas'); c.width=W;c.height=H; const x=c.getContext('2d');
+  x.fillStyle=DESP_C.fondo;x.fillRect(0,0,W,H); x.textBaseline='alphabetic';
+  // Cabecera: logotipo como en la web (Cormorant 300, mayúsculas espaciadas, punto en oro)
+  x.font='300 46px "Cormorant Garamond"';x.fillStyle=DESP_C.tinta;
+  let lx=M; lx+=despEspaciado(x,'VELOCE',lx,M+40,10); x.fillStyle=DESP_C.oro; x.fillText('.',lx+4,M+40); lx+=x.measureText('.').width+14; x.fillStyle=DESP_C.tinta; despEspaciado(x,'BIKES',lx,M+40,10);
+  x.font='500 22px Jost';x.fillStyle=DESP_C.gris; despEspaciado(x,'INFORME DE DESPERFECTOS',W-M,M+36,6,'right');
+  x.fillStyle=DESP_C.linea;x.fillRect(M,M+72,W-2*M,2);
+  // Moto
+  const marca=v.marca==='Otra'?'':(v.marca||'');
+  x.font='400 82px "Cormorant Garamond"';x.fillStyle=DESP_C.tinta;
+  x.fillText(despLineas(x,`${marca} ${v.modelo||''}`.trim(),W-2*M,1)[0]||'',M,M+190);
+  const datos=[v.año,v.km?Number(v.km).toLocaleString('es-ES')+' km':'',v.matricula,new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('   ·   ');
+  x.font='300 30px Jost';x.fillStyle=DESP_C.gris;x.fillText(datos,M,M+250);
+  // Observaciones
+  let top=M+300;
+  if(d.obs.trim()){
+    x.font='300 28px Jost';x.fillStyle=DESP_C.tinta;
+    const ls=despLineas(x,d.obs.trim(),W-2*M-30,4);
+    x.fillStyle=DESP_C.oro;x.fillRect(M,top+4,3,ls.length*40+4);x.fillStyle=DESP_C.tinta;
+    ls.forEach((l,i)=>x.fillText(l,M+30,top+36+i*40)); top+=ls.length*40+50;
+  }
+  // Fotos
+  const pie=H-M-40, hayNotas=d.fotos.some(f=>(f.nota||'').trim()), cap=hayNotas?92:52, g=36;
+  const celdas=despCeldas(d.fotos.length,M,top,W-2*M,pie-top-30,g);
+  celdas.forEach((cel,i)=>{
+    const ih=cel.h-cap, img=imgs[i];
+    x.fillStyle='#E4E4E1';x.fillRect(cel.x,cel.y,cel.w,ih);
+    if(img){const k=Math.max(cel.w/img.width,ih/img.height),sw=cel.w/k,sh=ih/k;x.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,cel.x,cel.y,cel.w,ih);}
+    x.font='400 34px "Cormorant Garamond"';x.fillStyle=DESP_C.oro;x.fillText(String(i+1).padStart(2,'0'),cel.x,cel.y+ih+40);
+    const nota=(d.fotos[i].nota||'').trim();
+    if(nota){x.font='300 25px Jost';x.fillStyle=DESP_C.tinta;despLineas(x,nota,cel.w-70,2).forEach((l,j)=>x.fillText(l,cel.x+60,cel.y+ih+38+j*32));}
+  });
+  // Pie
+  x.fillStyle=DESP_C.linea;x.fillRect(M,pie,W-2*M,2);
+  x.font='400 21px Jost';x.fillStyle=DESP_C.gris;
+  despEspaciado(x,'VELOCE BIKES  ·  LA FINCA, POZUELO DE ALARCÓN',M,pie+44,3);
+  despEspaciado(x,'+34 684 71 47 92  ·  VELOCEBIKES.ES',W-M,pie+44,3,'right');
+  return c;
+}
+function despPreviewPronto(){clearTimeout(despPrevTimer);despPrevTimer=setTimeout(despPreview,400);}
+async function despPreview(){
+  const el=document.getElementById('desp-preview'), v=despVeh(); if(!v||!el)return;
+  if(!despDe(v.id).fotos.length){el.innerHTML='<p class="form-hint">Añade alguna foto para ver la plantilla.</p>';return;}
+  try{const c=await despLienzo(v);el.innerHTML=`<img src="${c.toDataURL('image/jpeg',0.7)}" alt="Vista previa de la plantilla"/>`;}catch(e){el.innerHTML=`<p class="form-hint">${eH(e.message)}</p>`;}
+}
+function despScript(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el generador de PDF. Revisa la conexión.'));document.head.appendChild(s);});}
+async function despDescargar(tipo){
+  const v=despVeh(); if(!v)return;
+  try{
+    const c=await despLienzo(v);
+    const nombre=`desperfectos-${[v.marca==='Otra'?'':v.marca,v.modelo,v.matricula].filter(Boolean).join('-')}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/-+$/,'');
+    let blob;
+    if(tipo==='pdf'){
+      if(!window.jspdf)await despScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+      pdf.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',0,0,210,297);
+      blob=pdf.output('blob');
+    }else blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.9));
+    const file=new File([blob],`${nombre}.${tipo}`,{type:blob.type});
+    const movil=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(movil&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:file.name});return;}catch(e){if(e.name==='AbortError')return;}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  }catch(e){alert(e.message||'No se pudo generar la plantilla.');}
 }
 </script>
 <script>CRMSYNC.init();</script>
