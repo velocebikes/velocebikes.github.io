@@ -22,9 +22,10 @@ Repositorio → **Settings → Secrets and variables → Actions → New reposit
 | `FTP_USERNAME`  | Usuario FTP           |
 | `FTP_PASSWORD`  | Contraseña FTP        |
 
-La web se sube a `domains/velocebikes.es/public_html/`, que es la carpeta
-real del sitio en Hostinger (el usuario FTP principal entra en la raíz de la
-cuenta). Para cambiarla sin tocar el workflow, crea la variable
+La web se sube a `/domains/velocebikes.es/public_html/` (ruta absoluta en el
+FTP), que es `/home/u761802150/domains/velocebikes.es/public_html`. Ojo: al
+conectarse, el usuario FTP empieza en `/home/u761802150/public_html`, que no
+es la carpeta de la web. Para cambiar el destino sin tocar el workflow, crea la variable
 `FTP_SERVER_DIR` en la pestaña **Variables**.
 
 ### 3. Dominio (registrado en DonDominio)
@@ -57,3 +58,19 @@ en hPanel → Seguridad → SSL, y desactiva GitHub Pages en
 - *Login authentication failed*: revisa usuario/contraseña en los secretos.
 - *Error de TLS/FTPS*: cambia `protocol: ftps` por `protocol: ftp` en el workflow.
 - La web sale en otra carpeta: ajusta la variable `FTP_SERVER_DIR`.
+
+## CRM con datos en el servidor
+
+`crm.html` guarda los datos en la base de datos MySQL de Hostinger a través
+de `api/index.php`, así que se puede usar desde cualquier dispositivo.
+
+- **Login de servidor**: usuarios `julio`, `hugo` (con contabilidad) y
+  `empleado2`. La primera vez entran con `CRM_INITIAL_PASSWORD` y el CRM
+  obliga a cambiarla. Tras 5 intentos fallidos el usuario se bloquea 15 min.
+- **Documentos**: se guardan en `/home/u761802150/domains/velocebikes.es/crm-docs/`, fuera de
+  `public_html`, y solo se entregan con sesión iniciada.
+- **Solo con https**: la API se niega a funcionar sin SSL.
+- **Primera vez**: entrar desde el navegador que tiene los datos actuales;
+  el CRM ofrece subirlos (incluidos los documentos) al servidor.
+- `api/config.php` lo genera el despliegue con los secrets `DB_NAME`,
+  `DB_USER`, `DB_PASSWORD` y `CRM_INITIAL_PASSWORD`. No está en el repositorio.
