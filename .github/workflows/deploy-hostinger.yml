@@ -50,8 +50,12 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          # Carpeta de destino en el hosting (variable de repositorio opcional).
-          server-dir: ${{ vars.FTP_SERVER_DIR || 'domains/velocebikes.es/public_html/' }}
+          # Carpeta de destino: el usuario FTP entra en la carpeta del sitio,
+          # así que public_html/ es la carpeta pública de velocebikes.es.
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+          # Archivo donde la acción recuerda qué hay subido. Nombre nuevo para
+          # que vuelva a subirlo todo (la carpeta anterior no era la buena).
+          state-name: .ftp-deploy-state-v2.json
           # Solo sube los archivos que han cambiado desde el último despliegue.
           exclude: |
             **/.git*
@@ -60,19 +64,13 @@ jobs:
             CNAME
             DEPLOY.md
 
-      # Comprueba que Hostinger sirve la web y que el CRM conecta con la base
-      # de datos, aunque el dominio todavía no apunte a Hostinger.
-      # WEB_IP (variable) es la IP del sitio web; si no está, se usa la del FTP.
-      - name: Comprobar la web en Hostinger
-        env:
-          IP: ${{ vars.WEB_IP || secrets.FTP_SERVER }}
+      # Comprueba que la web y el CRM responden en el dominio real.
+      - name: Comprobar la web
         run: |
-          get() { curl --resolve velocebikes.es:80:$IP -sS -m 20 "$@"; }
           title() { grep -o '<title>[^<]*' | head -1 | sed 's/<title>//'; }
-          echo "Página principal:  $(get http://velocebikes.es/ | title)"
-          echo "Con https:         $(curl --resolve velocebikes.es:443:$IP -ksS -m 20 https://velocebikes.es/ | title)"
-          echo "Con www:           $(curl --resolve www.velocebikes.es:80:$IP -sS -m 20 http://www.velocebikes.es/ | title)"
-          echo "CRM:               $(get http://velocebikes.es/crm.html | title)"
-          echo "API sin https:     $(get http://velocebikes.es/api/index.php?a=me | head -c 200)"
-          echo "API + base datos:  $(get -H 'X-Forwarded-Proto: https' -H 'X-CRM: 1' -H 'Content-Type: application/json' \
-            -d '{"user":"prueba-despliegue","pass":"x"}' http://velocebikes.es/api/index.php?a=login | head -c 200)"
+          echo "Página principal:  $(curl -sS -m 20 https://velocebikes.es/ | title)"
+          echo "CRM:               $(curl -sS -m 20 -o /dev/null -w '%{http_code}' https://velocebikes.es/crm.html)"
+          if [ -f api/index.php ]; then
+            echo "API + base datos:  $(curl -sS -m 20 -H 'X-CRM: 1' -H 'Content-Type: application/json' \
+              -d '{"user":"prueba-despliegue","pass":"x"}' https://velocebikes.es/api/index.php?a=login | head -c 200)"
+          fi
