@@ -117,10 +117,18 @@ function seed_users(): void
     if (strlen($initial) < 8) return;
     $pdo = db();
     $ins = $pdo->prepare('INSERT INTO crm_users (username, nombre, pass_hash, conta, must_change) VALUES (?, ?, ?, ?, 1)');
-    $has = $pdo->prepare('SELECT 1 FROM crm_users WHERE username = ?');
+    $get = $pdo->prepare('SELECT pass_hash, must_change FROM crm_users WHERE username = ?');
+    $upd = $pdo->prepare('UPDATE crm_users SET pass_hash = ? WHERE username = ? AND must_change = 1');
     foreach (DEFAULT_USERS as [$u, $n, $c]) {
-        $has->execute([$u]);
-        if (!$has->fetch()) $ins->execute([$u, $n, password_hash($initial, PASSWORD_DEFAULT), $c]);
+        $get->execute([$u]);
+        $row = $get->fetch();
+        if (!$row) {
+            $ins->execute([$u, $n, password_hash($initial, PASSWORD_DEFAULT), $c]);
+        } elseif ($row['must_change'] && !password_verify($initial, $row['pass_hash'])) {
+            // Aún no ha puesto su propia contraseña: si se cambia el secret
+            // CRM_INITIAL_PASSWORD, la contraseña inicial pasa a ser la nueva.
+            $upd->execute([password_hash($initial, PASSWORD_DEFAULT), $u]);
+        }
     }
 }
 
