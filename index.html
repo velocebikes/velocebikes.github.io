@@ -720,9 +720,20 @@ footer{
 // ══ STOCK DINÁMICO ══
 let galFotos=[];let galIdx=0;
 
+// Las motos se piden al servidor (api/index.php?a=stock), que solo da las
+// Visibles/Reservadas y sin datos internos.
+let stockVehiculos=[];
+const escH=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function cargarStock(){
+  try{
+    const r=await fetch('api/index.php?a=stock',{cache:'no-store'});
+    if(r.ok){stockVehiculos=(await r.json()).vehiculos||[];}
+  }catch(e){console.error(e);}
+  renderStockPublico();
+}
 function renderStockPublico(){
   try{
-    const vehiculos=JSON.parse(localStorage.getItem('vcr_vehiculos'))||[];
+    const vehiculos=stockVehiculos;
     const visibles=vehiculos.filter(v=>v.estado==='Visible'||v.estado==='Reservado');
     const grid=document.getElementById('motos-grid-dynamic');
     const count=document.getElementById('stock-count');
@@ -738,22 +749,22 @@ function renderStockPublico(){
       const reservado=v.estado==='Reservado';
       const imgSrc=v.fotos&&v.fotos.length?v.fotos[0]:'';
       const featured=i===0?'featured':'';
-      return `<div class="moto-card ${featured} r" onclick="openMotoModal(${v.id})" style="cursor:pointer;${reservado?'opacity:0.75':''}">
+      return `<div class="moto-card ${featured} r" onclick="openMotoModal(${escH(JSON.stringify(v.id))})" style="cursor:pointer;${reservado?'opacity:0.75':''}">
         <div class="moto-img">
-          ${imgSrc?`<img src="${imgSrc}" alt="${v.marca} ${v.modelo}" loading="lazy"/>`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--muted2);">📷</div>'}
+          ${imgSrc?`<img src="${escH(imgSrc)}" alt="${escH(v.marca)} ${escH(v.modelo)}" loading="lazy"/>`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--muted2);">📷</div>'}
           <div class="moto-img-overlay"></div>
           ${reservado?'<div style="position:absolute;top:1rem;left:1rem;z-index:5;background:rgba(200,170,110,0.15);border:0.5px solid var(--gold);color:var(--gold);font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;padding:0.3rem 0.8rem;">Reservado</div>':''}
           ${v.fotos&&v.fotos.length>1?`<div style="position:absolute;bottom:0.75rem;right:0.75rem;background:rgba(0,0,0,0.6);color:white;font-size:0.6rem;letter-spacing:0.1em;padding:0.2rem 0.6rem;">📷 ${v.fotos.length}</div>`:''}
         </div>
         <div class="moto-body">
           ${v.garantia==='Sí'?'<div class="moto-badge">Con garantía</div>':''}
-          <div class="moto-brand">${v.marca}</div>
-          <div class="moto-name">${v.modelo}</div>
+          <div class="moto-brand">${escH(v.marca)}</div>
+          <div class="moto-name">${escH(v.modelo)}</div>
           <div class="moto-specs">
-            ${v.año?`<div class="spec"><span class="spec-val">${v.año}</span><span class="spec-lbl">Año</span></div>`:''}
+            ${v.año?`<div class="spec"><span class="spec-val">${escH(v.año)}</span><span class="spec-lbl">Año</span></div>`:''}
             ${v.km?`<div class="spec"><span class="spec-val">${Number(v.km).toLocaleString('es-ES')} km</span><span class="spec-lbl">Kilómetros</span></div>`:''}
-            ${v.cc?`<div class="spec"><span class="spec-val">${v.cc} cc</span><span class="spec-lbl">Cilindrada</span></div>`:''}
-            ${v.cv?`<div class="spec"><span class="spec-val">${v.cv} cv</span><span class="spec-lbl">Potencia</span></div>`:''}
+            ${v.cc?`<div class="spec"><span class="spec-val">${escH(v.cc)} cc</span><span class="spec-lbl">Cilindrada</span></div>`:''}
+            ${v.cv?`<div class="spec"><span class="spec-val">${escH(v.cv)} cv</span><span class="spec-lbl">Potencia</span></div>`:''}
           </div>
           <div class="moto-footer">
             <div class="moto-price">${v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'Consultar'}</div>
@@ -767,8 +778,7 @@ function renderStockPublico(){
 
 function openMotoModal(id){
   try{
-    const vehiculos=JSON.parse(localStorage.getItem('vcr_vehiculos'))||[];
-    const v=vehiculos.find(x=>x.id===id);
+    const v=stockVehiculos.find(x=>x.id===id);
     if(!v)return;
     galFotos=v.fotos&&v.fotos.length?v.fotos:[];
     galIdx=0;
@@ -825,7 +835,7 @@ document.addEventListener('keydown',e=>{
 });
 
 // Cargar stock al iniciar
-renderStockPublico();
+cargarStock();
 </script>
 
 <!-- ═══ PORQUE VELOCE ═══ -->

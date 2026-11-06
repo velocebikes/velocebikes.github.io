@@ -1036,15 +1036,10 @@ function openModalVehiculo(id=null){
 }
 
 // ══ PUBLICAR STOCK EN LA WEB ══
-// Genera stock.json solo con las motos Visibles/Reservadas y sin datos internos (ni matrícula ni bastidor)
-async function publicarStockWeb(){
-  const pub=load('vehiculos').filter(v=>v.estado==='Visible'||v.estado==='Reservado').map(v=>({id:v.id,marca:v.marca,modelo:v.modelo,año:v.año,cv:v.cv,cc:v.cc,km:v.km,garantia:v.garantia,extras:v.extras,estado:v.estado,precio:v.precio,fotos:v.fotos||[]}));
-  const blob=new Blob([JSON.stringify({actualizado:new Date().toISOString(),vehiculos:pub})],{type:'application/json'});
-  const file=new File([blob],'stock.json',{type:'application/json'});
-  const movil=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if(movil&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'stock.json'});}catch(e){}}
-  else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='stock.json';document.body.appendChild(a);a.click();a.remove();}
-  alert(`stock.json listo con ${pub.length} motos.\n\nSúbelo a GitHub (Add file → Upload files) y en 1-2 minutos la web lo mostrará a todo el mundo.`);
+function publicarStockWeb(){
+  // La web pública lee el stock del servidor (api/index.php?a=stock): no hay que subir nada.
+  const n=load('vehiculos').filter(v=>v.estado==='Visible'||v.estado==='Reservado').length;
+  alert(`La web se actualiza sola: ahora muestra ${n} moto${n!==1?'s':''} (las que están en Visible o Reservado).\n\nSolo salen marca, modelo, datos técnicos, precio y fotos. Nunca la matrícula ni el bastidor.`);
 }
 
 // ══ GUARDAR VEHÍCULO ══
