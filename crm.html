@@ -3673,7 +3673,7 @@ async function despLienzo(v){
   const marca=v.marca==='Otra'?'':(v.marca||'');
   x.font='400 82px "Cormorant Garamond"';x.fillStyle=DESP_C.tinta;
   x.fillText(despLineas(x,`${marca} ${v.modelo||''}`.trim(),W-2*M,1)[0]||'',M,M+190);
-  const datos=[v.año,v.km?Number(v.km).toLocaleString('es-ES')+' km':'',v.matricula,new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('   ·   ');
+  const datos=[v.año,v.km?String(Math.round(Number(v.km))).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+' km':'',v.matricula,new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})].filter(Boolean).join('   ·   ');
   x.font='300 30px Jost';x.fillStyle=DESP_C.gris;x.fillText(datos,M,M+250);
   // Observaciones
   let top=M+300;
