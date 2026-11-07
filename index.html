@@ -695,6 +695,8 @@ footer{
     </div>
     <!-- MINIATURAS -->
     <div id="modal-thumbs" style="display:flex;gap:4px;overflow-x:auto;padding:4px 0;background:#0a0908;"></div>
+    <!-- DESPERFECTOS Y VÍDEO -->
+    <div id="modal-tiles" class="m-tiles"></div>
     <!-- INFO -->
     <div style="display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;margin-top:2rem;">
       <div>
@@ -716,6 +718,59 @@ footer{
   </div>
 </div>
 
+
+<!-- ══ DESPERFECTOS (público) ══ -->
+<div id="desp-ov" class="ov" style="display:none;">
+  <button class="ov-close" onclick="cerrarOv('desp-ov')" aria-label="Cerrar">✕</button>
+  <div class="ov-in">
+    <div class="ov-eyebrow">Informe de desperfectos</div>
+    <div class="ov-title" id="desp-ov-title"></div>
+    <div class="ov-meta" id="desp-ov-meta"></div>
+    <p class="ov-obs" id="desp-ov-obs"></p>
+    <p class="ov-intro">Te enseñamos todo lo que tiene la moto antes de que vengas a verla.</p>
+    <div id="desp-ov-list"></div>
+    <div class="ov-acc">
+      <button class="ov-btn" id="desp-ov-pdf" onclick="despPublicoDescargar()">⬇ Descargar informe (PDF)</button>
+      <span id="desp-ov-msg" class="ov-msg"></span>
+    </div>
+  </div>
+</div>
+<!-- ══ VÍDEO ══ -->
+<div id="video-ov" class="ov" style="display:none;">
+  <button class="ov-close" onclick="cerrarOv('video-ov')" aria-label="Cerrar">✕</button>
+  <div class="ov-in" style="max-width:1000px;"><div id="video-ov-box"></div></div>
+</div>
+<style>
+.m-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.m-tiles:empty{display:none;}
+.m-tile{position:relative;height:110px;overflow:hidden;cursor:pointer;background:#0a0908;border:0.5px solid var(--border);display:flex;flex-direction:column;gap:0.45rem;align-items:center;justify-content:center;}
+.m-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;transition:opacity .2s;}
+.m-tile:hover img{opacity:0.8;}
+.m-tile-lbl{position:relative;background:rgba(243,243,241,0.92);color:#0A0908;font-family:var(--font-sans);font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;padding:0.55rem 1.1rem;}
+.m-tile-play{position:relative;flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:rgba(243,243,241,0.92);display:flex;align-items:center;justify-content:center;}
+.m-tile-play::after{content:'';border-left:16px solid #0A0908;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px;}
+.m-tile-sub{position:relative;text-align:center;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text);}
+.ov{position:fixed;inset:0;z-index:950;background:#080807;overflow-y:auto;}
+.ov-close{position:fixed;top:1.2rem;right:1.2rem;z-index:960;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.1rem;cursor:pointer;}
+.ov-in{max-width:820px;margin:0 auto;padding:4rem 1.25rem 4rem;}
+.ov-eyebrow{font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:0.5rem;}
+.ov-title{font-family:var(--font-serif);font-size:2.2rem;font-weight:300;line-height:1.1;}
+.ov-meta{font-size:0.8rem;color:var(--muted);margin-top:0.5rem;}
+.ov-obs{border-left:2px solid var(--gold);padding-left:1rem;margin:1.5rem 0 0;font-size:0.9rem;line-height:1.7;}
+.ov-obs:empty{display:none;}
+.ov-intro{font-size:0.8rem;color:var(--muted);margin:1.5rem 0;}
+.desp-pub{margin-bottom:2rem;}
+.desp-pub img{width:100%;display:block;background:#0a0908;}
+.desp-pub-cap{display:flex;gap:1rem;align-items:baseline;padding-top:0.7rem;}
+.desp-pub-num{font-family:var(--font-serif);font-size:1.4rem;color:var(--gold);}
+.desp-pub-nota{font-size:0.9rem;line-height:1.6;}
+.ov-acc{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-top:1rem;}
+.ov-btn{background:var(--gold);color:#080807;border:none;padding:1rem 1.6rem;font-family:var(--font-sans);font-size:0.68rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;}
+.ov-msg{font-size:0.75rem;color:var(--muted);}
+#video-ov-box video,#video-ov-box iframe{width:100%;aspect-ratio:16/9;display:block;background:#000;border:0;}
+@media(max-width:768px){.m-tile{height:86px;}.ov-title{font-size:1.7rem;}}
+</style>
+<script src="desperfectos-plantilla.js" defer></script>
 <script>
 // ══ STOCK DINÁMICO ══
 let galFotos=[];let galIdx=0;
@@ -801,6 +856,7 @@ function openMotoModal(id){
     document.getElementById('modal-wa-btn').href=`https://wa.me/34684714792?text=${waMsg}`;
 
     renderGallery();
+    renderTiles(v);
     document.getElementById('moto-modal').style.display='block';
     document.body.style.overflow='hidden';
   }catch(e){console.error(e);}
@@ -824,9 +880,56 @@ function renderGallery(){
 function galeryNext(){galIdx=(galIdx+1)%galFotos.length;renderGallery();}
 function galeryPrev(){galIdx=(galIdx-1+galFotos.length)%galFotos.length;renderGallery();}
 
+
+// ── Recuadros "Desperfectos" y "Vídeo" del anuncio ──
+let despPub=null;
+function renderTiles(v){
+  const el=document.getElementById('modal-tiles'); const t=[];
+  if(v.desperfectos>0)t.push(`<div class="m-tile" onclick="abrirDesperfectos(${escH(JSON.stringify(v.id))})">${v.desp_portada?`<img src="${escH(v.desp_portada)}" alt="" loading="lazy"/>`:''}<span class="m-tile-lbl">Desperfectos</span></div>`);
+  if(v.video)t.push(`<div class="m-tile" onclick="abrirVideo(${escH(JSON.stringify(v.video))})"><span class="m-tile-play"></span><span class="m-tile-sub">Vídeo</span></div>`);
+  el.style.gridTemplateColumns=t.length===1?'1fr':'';
+  el.innerHTML=t.join('');
+}
+function cerrarOv(id){document.getElementById(id).style.display='none';if(id==='video-ov')document.getElementById('video-ov-box').innerHTML='';}
+async function abrirDesperfectos(id){
+  const ov=document.getElementById('desp-ov'), list=document.getElementById('desp-ov-list');
+  list.innerHTML='<p class="ov-intro">Cargando…</p>'; document.getElementById('desp-ov-msg').textContent='';
+  ov.style.display='block'; ov.scrollTop=0;
+  try{
+    const r=await fetch('api/index.php?a=desperfectos&veh='+encodeURIComponent(id)); if(!r.ok)throw new Error();
+    const d=await r.json(); despPub=d; const v=d.vehiculo||{};
+    document.getElementById('desp-ov-title').textContent=`${v.marca==='Otra'?'':v.marca||''} ${v.modelo||''}`.trim();
+    document.getElementById('desp-ov-meta').textContent=[v.año,v.km?String(Math.round(Number(v.km))).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+' km':''].filter(Boolean).join(' · ');
+    document.getElementById('desp-ov-obs').textContent=d.obs||'';
+    list.innerHTML=(d.fotos||[]).map((f,i)=>`<div class="desp-pub"><img src="${escH(f.url)}" alt="Desperfecto ${i+1}" loading="lazy"/><div class="desp-pub-cap"><span class="desp-pub-num">${String(i+1).padStart(2,'0')}</span><span class="desp-pub-nota">${escH(f.nota||'')}</span></div></div>`).join('');
+    if(window.VBPlantilla)VBPlantilla.cargarJsPDF().catch(()=>{});
+  }catch(e){list.innerHTML='<p class="ov-intro">No se ha podido cargar. Inténtalo de nuevo o escríbenos por WhatsApp.</p>';}
+}
+async function despPublicoDescargar(){
+  const d=despPub, msg=document.getElementById('desp-ov-msg'); if(!d||!window.VBPlantilla)return;
+  msg.textContent='Preparando el informe…';
+  try{
+    const datos={...(d.vehiculo||{}),obs:d.obs,fotos:d.fotos};
+    const c=await VBPlantilla.lienzo(datos); await VBPlantilla.cargarJsPDF();
+    msg.textContent='';
+    await VBPlantilla.entregar(VBPlantilla.pdfBlob(c),VBPlantilla.nombreArchivo(datos)+'.pdf');
+  }catch(e){msg.textContent='No se ha podido generar el PDF.';}
+}
+function abrirVideo(url){
+  const box=document.getElementById('video-ov-box'); let m;
+  if((m=url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/)))
+    box.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${escH(m[1])}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Vídeo de la moto"></iframe>`;
+  else if(/\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)||/res\.cloudinary\.com\/.+\/video\//.test(url))
+    box.innerHTML=`<video src="${escH(url)}" controls autoplay playsinline></video>`;
+  else{window.open(url,'_blank','noopener');return;}
+  document.getElementById('video-ov').style.display='block';
+}
+
 function closeMotoModal(){document.getElementById('moto-modal').style.display='none';document.body.style.overflow='';}
 
 document.addEventListener('keydown',e=>{
+  const abierto=['video-ov','desp-ov'].find(id=>document.getElementById(id).style.display!=='none');
+  if(abierto){if(e.key==='Escape')cerrarOv(abierto);return;}
   if(document.getElementById('moto-modal').style.display!=='none'){
     if(e.key==='ArrowRight')galeryNext();
     if(e.key==='ArrowLeft')galeryPrev();

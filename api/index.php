@@ -224,28 +224,87 @@ if (empty($CFG['allow_insecure']) && !is_https()) {
 // formulario de otra web no puede enviar.
 if ($method !== 'GET' && ($_SERVER['HTTP_X_CRM'] ?? '') !== '1') fail('Petición no permitida.', 403);
 
-// Stock público para la web: solo motos Visibles/Reservadas y solo datos
-// públicos (sin matrícula, bastidor, costes ni nada de clientes).
-if ($action === 'stock' && $method === 'GET') {
+// ── Parte pública (sin login): stock de la web y desperfectos de las motos
+// en venta. Solo motos Visibles/Reservadas y solo datos públicos: nunca
+// matrícula, bastidor, costes ni nada de clientes.
+function kv_json(string $k): array
+{
+    $st = db()->prepare('SELECT v FROM crm_kv WHERE k = ?');
+    $st->execute([$k]);
+    $d = json_decode((string)$st->fetchColumn(), true);
+    return is_array($d) ? $d : [];
+}
+function vehiculo_publico(string $id): ?array
+{
+    foreach (kv_json('vcr_vehiculos') as $v) {
+        if (is_array($v) && (string)($v['id'] ?? '') === $id && in_array($v['estado'] ?? '', ['Visible', 'Reservado'], true)) return $v;
+    }
+    return null;
+}
+function desperfectos_publicos(string $vehId): array
+{
+    $d = kv_json('vcr_desperfectos')[$vehId] ?? [];
+    $fotos = [];
+    foreach ((array)($d['fotos'] ?? []) as $f) {
+        if (is_array($f) && preg_match('/^[A-Za-z0-9_-]{1,40}$/', (string)($f['id'] ?? ''))) $fotos[] = ['id' => (string)$f['id'], 'nota' => mb_substr((string)($f['nota'] ?? ''), 0, 300)];
+    }
+    return ['fotos' => array_slice($fotos, 0, 6), 'obs' => mb_substr((string)($d['obs'] ?? ''), 0, 1000)];
+}
+function url_https(string $u): string
+{
+    return preg_match('#^https://[^\s"<>]+$#', $u) ? $u : '';
+}
+
+if ($method === 'GET' && in_array($action, ['stock', 'desperfectos', 'dfoto'], true)) {
     try {
-        $st = db()->prepare('SELECT v FROM crm_kv WHERE k = ?');
-        $st->execute(['vcr_vehiculos']);
-        $all = json_decode((string)$st->fetchColumn(), true) ?: [];
-        $pub = [];
-        foreach ($all as $v) {
-            if (!is_array($v) || !in_array($v['estado'] ?? '', ['Visible', 'Reservado'], true)) continue;
-            $fotos = array_values(array_filter((array)($v['fotos'] ?? []), fn($f) => is_string($f) && preg_match('#^https://#', $f)));
-            $pub[] = [
-                'id' => $v['id'] ?? null, 'marca' => (string)($v['marca'] ?? ''), 'modelo' => (string)($v['modelo'] ?? ''),
-                'año' => $v['año'] ?? '', 'cv' => $v['cv'] ?? '', 'cc' => $v['cc'] ?? '', 'km' => $v['km'] ?? '',
-                'garantia' => $v['garantia'] ?? '', 'extras' => (string)($v['extras'] ?? ''), 'estado' => $v['estado'],
-                'precio' => $v['precio'] ?? '', 'fotos' => $fotos,
-            ];
+        if ($action === 'stock') {
+            $pub = [];
+            foreach (kv_json('vcr_vehiculos') as $v) {
+                if (!is_array($v) || !in_array($v['estado'] ?? '', ['Visible', 'Reservado'], true)) continue;
+                $fotos = array_values(array_filter((array)($v['fotos'] ?? []), fn($f) => is_string($f) && url_https($f) !== ''));
+                $vid = (string)($v['id'] ?? '');
+                $df = desperfectos_publicos($vid)['fotos'];
+                $nd = count($df);
+                $pub[] = [
+                    'id' => $v['id'] ?? null, 'marca' => (string)($v['marca'] ?? ''), 'modelo' => (string)($v['modelo'] ?? ''),
+                    'año' => $v['año'] ?? '', 'cv' => $v['cv'] ?? '', 'cc' => $v['cc'] ?? '', 'km' => $v['km'] ?? '',
+                    'garantia' => $v['garantia'] ?? '', 'extras' => (string)($v['extras'] ?? ''), 'estado' => $v['estado'],
+                    'precio' => $v['precio'] ?? '', 'fotos' => $fotos,
+                    'video' => url_https((string)($v['video'] ?? '')), 'desperfectos' => $nd,
+                    'desp_portada' => $nd ? 'api/index.php?' . http_build_query(['a' => 'dfoto', 'veh' => $vid, 'id' => $df[0]['id']]) : '',
+                ];
+            }
+            header('Cache-Control: public, max-age=60', true);
+            out(['vehiculos' => $pub]);
         }
-        header('Cache-Control: public, max-age=60', true);
-        out(['vehiculos' => $pub]);
+        $veh = (string)($_GET['veh'] ?? '');
+        $v = vehiculo_publico($veh);
+        if (!$v) fail('No disponible.', 404);
+        $d = desperfectos_publicos($veh);
+        if ($action === 'desperfectos') {
+            header('Cache-Control: public, max-age=60', true);
+            out([
+                'vehiculo' => ['marca' => (string)($v['marca'] ?? ''), 'modelo' => (string)($v['modelo'] ?? ''), 'año' => $v['año'] ?? '', 'km' => $v['km'] ?? ''],
+                'obs' => $d['obs'],
+                'fotos' => array_map(fn($f) => ['nota' => $f['nota'], 'url' => 'api/index.php?' . http_build_query(['a' => 'dfoto', 'veh' => $veh, 'id' => $f['id']])], $d['fotos']),
+            ]);
+        }
+        // dfoto: solo fotos que están en los desperfectos de esa moto
+        $id = (string)($_GET['id'] ?? '');
+        if (!in_array($id, array_column($d['fotos'], 'id'), true)) fail('No disponible.', 404);
+        $st = db()->prepare('SELECT tipo FROM crm_docs WHERE id = ? AND veh_id = ? AND parte = ?');
+        $st->execute([$id, $veh, 'desperfecto']);
+        $tipo = (string)$st->fetchColumn();
+        $path = doc_path($id);
+        if (!$tipo || !is_file($path) || !preg_match('#^image/(jpeg|png|webp|gif|heic|heif)$#', $tipo)) fail('No disponible.', 404);
+        header_remove('Content-Type');
+        header('Content-Type: ' . $tipo);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: public, max-age=300', true);
+        readfile($path);
+        exit;
     } catch (Throwable $e) {
-        error_log('CRM API stock: ' . $e->getMessage());
+        error_log('CRM API pública: ' . $e->getMessage());
         fail('Error del servidor.', 500);
     }
 }
