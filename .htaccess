@@ -1,0 +1,14 @@
+# Siempre por https
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Que los navegadores no se queden con una versión vieja de la web o el CRM
+# (las fotos sí se guardan en caché, que no cambian).
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+Options -Indexes

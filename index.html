@@ -698,14 +698,14 @@ footer{
     <!-- DESPERFECTOS Y VÍDEO -->
     <div id="modal-tiles" class="m-tiles"></div>
     <!-- INFO -->
-    <div style="display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;margin-top:2rem;">
+    <div id="modal-info" style="display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;margin-top:2rem;">
       <div>
         <div id="modal-brand" style="font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:0.3rem;"></div>
         <div id="modal-name" style="font-family:var(--font-serif);font-size:2.2rem;font-weight:300;line-height:1.1;margin-bottom:1.5rem;"></div>
         <div id="modal-specs" style="display:flex;gap:2rem;flex-wrap:wrap;padding:1.25rem 0;border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);margin-bottom:1.5rem;"></div>
         <div id="modal-extras" style="font-size:0.85rem;color:var(--muted);line-height:1.8;"></div>
       </div>
-      <div style="text-align:right;min-width:200px;">
+      <div id="modal-buy" style="text-align:right;min-width:200px;">
         <div style="font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Precio</div>
         <div id="modal-price" style="font-family:var(--font-serif);font-size:2.8rem;font-weight:300;color:var(--text);margin-bottom:1.5rem;"></div>
         <a id="modal-wa-btn" href="#" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:0.75rem;background:#25D366;color:white;padding:1.1rem 2rem;font-family:var(--font-sans);font-size:0.85rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;transition:opacity .2s;margin-bottom:0.75rem;">
@@ -741,6 +741,18 @@ footer{
   <div class="ov-in" style="max-width:1000px;"><div id="video-ov-box"></div></div>
 </div>
 <style>
+#moto-modal{overflow-x:hidden;}
+#moto-modal>div:last-child{max-width:100%;}
+@media(max-width:768px){
+  #moto-modal>div:last-child{padding-left:1rem!important;padding-right:1rem!important;}
+  #modal-info{grid-template-columns:1fr!important;gap:1.25rem!important;}
+  #modal-buy{text-align:left!important;min-width:0!important;}
+  #modal-name{font-size:1.9rem!important;margin-bottom:1rem!important;}
+  #modal-price{font-size:2.2rem!important;margin-bottom:1rem!important;}
+  #modal-specs{gap:1.25rem 2rem!important;}
+  #modal-gallery button[onclick^="galery"]{width:40px!important;height:40px!important;}
+  .mm-bar{padding:0.6rem 1rem;}
+}
 .mm-bar{position:sticky;top:0;z-index:910;display:flex;justify-content:space-between;align-items:center;padding:0.8rem 1.25rem;background:rgba(8,8,7,0.96);border-bottom:0.5px solid var(--border);margin-bottom:-3.5rem;}
 .mm-back{background:none;border:0.5px solid var(--border-warm,rgba(200,170,110,0.3));color:var(--text);font-family:var(--font-sans);font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;padding:0.75rem 1.1rem;cursor:pointer;}
 .mm-x{background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.1rem;cursor:pointer;}
