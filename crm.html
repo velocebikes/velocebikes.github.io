@@ -299,6 +299,30 @@ textarea.f-input{resize:vertical;min-height:80px;}
   .modal-bg{padding:0;align-items:stretch;}
   .modal{max-height:100vh;height:100%;max-width:none!important;}
 }
+
+/* Vehículos en el móvil: cada moto como tarjeta, sin deslizar de lado */
+.m-only{display:none;}
+@media(max-width:768px){
+  #tb-vehiculos{display:block;min-width:0;}
+  #tb-vehiculos thead{display:none;}
+  #tb-vehiculos tbody{display:block;}
+  #tb-vehiculos tr{display:grid;grid-template-columns:96px 1fr;gap:0.7rem 0.9rem;padding:1rem;border-bottom:0.5px solid var(--border);align-items:start;}
+  #tb-vehiculos td{display:block;padding:0;border:none;background:none;}
+  #tb-vehiculos td[colspan]{grid-column:1/-1;}
+  #tb-vehiculos td:nth-child(1) .moto-table-img,#tb-vehiculos td:nth-child(1) .moto-table-img-ph{width:96px;height:72px;}
+  #tb-vehiculos td:nth-child(3){font-size:1rem;line-height:1.3;min-width:0;}
+  #tb-vehiculos .m-only{display:block;}
+  #tb-vehiculos .m-meta{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;line-height:1.4;}
+  #tb-vehiculos td:nth-child(2),#tb-vehiculos td:nth-child(4),#tb-vehiculos td:nth-child(5),#tb-vehiculos td:nth-child(6),#tb-vehiculos td:nth-child(7),#tb-vehiculos td:nth-child(9){display:none;}
+  #tb-vehiculos td:nth-child(8){grid-column:1/-1;display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;}
+  #tb-vehiculos td:nth-child(8):empty{display:none;}
+  #tb-vehiculos td:nth-child(8)>*{margin:0!important;}
+  #tb-vehiculos td:nth-child(10){grid-column:1/-1;display:grid!important;grid-template-columns:repeat(3,1fr);gap:0.4rem!important;}
+  #tb-vehiculos td:nth-child(10) button{justify-content:center;width:100%;padding:0.6rem 0.2rem!important;letter-spacing:0.1em;}
+  #page-vehiculos .table-toolbar>div{overflow-x:auto;flex-wrap:nowrap;max-width:100%;padding-bottom:0.2rem;-webkit-overflow-scrolling:touch;}
+  #page-vehiculos .table-toolbar>div button{flex:0 0 auto;}
+  #page-vehiculos .search-input{width:100%;}
+}
 </style>
 </head>
 <body>
@@ -1104,7 +1128,7 @@ function renderVehiculos(){
     <tr>
       <td>${v.fotos&&v.fotos.length?`<img class="moto-table-img" src="${v.fotos[0]}" loading="lazy"/>`:`<div class="moto-table-img-ph">📷</div>`}</td>
       <td>${v.matricula||'—'}</td>
-      <td><strong style="font-weight:400">${v.marca}</strong> ${v.modelo}</td>
+      <td><strong style="font-weight:400">${v.marca}</strong> ${v.modelo}<div class="m-only m-meta">${[v.matricula,v.año,v.km?Number(v.km).toLocaleString('es-ES')+' km':''].filter(Boolean).join(' · ')}${v.precio?` · <span style="color:var(--gold)">${Number(v.precio).toLocaleString('es-ES')} €</span>`:''}</div><div class="m-only" style="margin-top:0.4rem;">${estadoBadge(v.estado)}</div></td>
       <td>${v.año||'—'}</td>
       <td>${v.km?Number(v.km).toLocaleString('es-ES')+' km':'—'}</td>
       <td>${v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'—'}</td>
