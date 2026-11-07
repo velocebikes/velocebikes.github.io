@@ -683,8 +683,8 @@ footer{
 
 <!-- MODAL FICHA MOTO -->
 <div id="moto-modal" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);overflow-y:auto;">
-  <button onclick="closeMotoModal()" style="position:fixed;top:1.5rem;right:1.5rem;z-index:910;background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-  <div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem 4rem;">
+  <div class="mm-bar"><button class="mm-back" onclick="closeMotoModal()">‹ Volver al stock</button><button class="mm-x" onclick="closeMotoModal()" aria-label="Cerrar">✕</button></div>
+  <div style="max-width:1000px;margin:0 auto;padding:4.5rem 1.5rem 4rem;">
     <!-- GALERÍA -->
     <div id="modal-gallery" style="position:relative;background:#0a0908;aspect-ratio:16/9;overflow:hidden;margin-bottom:0;">
       <img id="modal-img-main" src="" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .3s;"/>
@@ -741,6 +741,10 @@ footer{
   <div class="ov-in" style="max-width:1000px;"><div id="video-ov-box"></div></div>
 </div>
 <style>
+.mm-bar{position:sticky;top:0;z-index:910;display:flex;justify-content:space-between;align-items:center;padding:0.8rem 1.25rem;background:rgba(8,8,7,0.96);border-bottom:0.5px solid var(--border);margin-bottom:-3.5rem;}
+.mm-back{background:none;border:0.5px solid var(--border-warm,rgba(200,170,110,0.3));color:var(--text);font-family:var(--font-sans);font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;padding:0.75rem 1.1rem;cursor:pointer;}
+.mm-x{background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.15);color:var(--text);width:44px;height:44px;font-size:1.1rem;cursor:pointer;}
+.ov-close{top:0.9rem!important;}
 .m-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .m-tiles:empty{display:none;}
 .m-tile{position:relative;height:110px;overflow:hidden;cursor:pointer;background:#0a0908;border:0.5px solid var(--border);display:flex;flex-direction:column;gap:0.45rem;align-items:center;justify-content:center;}
@@ -828,6 +832,8 @@ function renderStockPublico(){
         </div>
       </div>`;
     }).join('');
+    // Las tarjetas llegan después de cargar la página: hay que mostrarlas (animación "r").
+    grid.querySelectorAll('.r').forEach(el=>{if(typeof io!=='undefined')io.observe(el);else el.classList.add('v');});
   }catch(e){console.error(e);}
 }
 
@@ -842,7 +848,7 @@ function openMotoModal(id){
     document.getElementById('modal-price').textContent=v.precio?Number(v.precio).toLocaleString('es-ES')+' €':'Consultar';
     document.getElementById('modal-extras').textContent=v.extras||'';
     document.getElementById('modal-reservado-badge').style.display=v.estado==='Reservado'?'block':'none';
-    document.getElementById('modal-garantia-badge').textContent=v.garantia==='Sí'?'✓ Con garantía':'';
+    document.getElementById('modal-garantia-badge').textContent=v.garantia==='Sí'?'✓ Con garantía':'';document.getElementById('modal-garantia-badge').style.display=v.garantia==='Sí'?'':'none';
 
     const specs=[
       v.año?{v:v.año,l:'Año'}:null,
@@ -857,7 +863,9 @@ function openMotoModal(id){
 
     renderGallery();
     renderTiles(v);
+    if(document.getElementById('moto-modal').style.display==='none')history.pushState({vb:'moto'},'');
     document.getElementById('moto-modal').style.display='block';
+    document.getElementById('moto-modal').scrollTop=0;
     document.body.style.overflow='hidden';
   }catch(e){console.error(e);}
 }
@@ -890,10 +898,12 @@ function renderTiles(v){
   el.style.gridTemplateColumns=t.length===1?'1fr':'';
   el.innerHTML=t.join('');
 }
-function cerrarOv(id){document.getElementById(id).style.display='none';if(id==='video-ov')document.getElementById('video-ov-box').innerHTML='';}
+function _cerrarOv(id){document.getElementById(id).style.display='none';if(id==='video-ov')document.getElementById('video-ov-box').innerHTML='';}
+function cerrarOv(id){if(history.state&&history.state.vb==='ov')history.back();else _cerrarOv(id);}
 async function abrirDesperfectos(id){
   const ov=document.getElementById('desp-ov'), list=document.getElementById('desp-ov-list');
   list.innerHTML='<p class="ov-intro">Cargando…</p>'; document.getElementById('desp-ov-msg').textContent='';
+  if(ov.style.display==='none')history.pushState({vb:'ov'},'');
   ov.style.display='block'; ov.scrollTop=0;
   try{
     const r=await fetch('api/index.php?a=desperfectos&veh='+encodeURIComponent(id)); if(!r.ok)throw new Error();
@@ -922,10 +932,18 @@ function abrirVideo(url){
   else if(/\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)||/res\.cloudinary\.com\/.+\/video\//.test(url))
     box.innerHTML=`<video src="${escH(url)}" controls autoplay playsinline></video>`;
   else{window.open(url,'_blank','noopener');return;}
+  if(document.getElementById('video-ov').style.display==='none')history.pushState({vb:'ov'},'');
   document.getElementById('video-ov').style.display='block';
 }
 
-function closeMotoModal(){document.getElementById('moto-modal').style.display='none';document.body.style.overflow='';}
+function _cerrarMoto(){document.getElementById('moto-modal').style.display='none';document.body.style.overflow='';}
+// El botón "atrás" del móvil (o deslizar) cierra la ficha en vez de salir de la web.
+function closeMotoModal(){if(history.state&&history.state.vb)history.back();else _cerrarMoto();}
+window.addEventListener('popstate',()=>{
+  const ovs=['video-ov','desp-ov'].filter(id=>document.getElementById(id).style.display!=='none');
+  if(ovs.length){ovs.forEach(_cerrarOv);return;}
+  if(document.getElementById('moto-modal').style.display!=='none')_cerrarMoto();
+});
 
 document.addEventListener('keydown',e=>{
   const abierto=['video-ov','desp-ov'].find(id=>document.getElementById(id).style.display!=='none');
